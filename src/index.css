@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+    --font-display: "Outfit", sans-serif;
+}
+
+:root {
+    --bg-primary: #f9fafb;
+    --text-primary: #111827;
+    --card-bg: #ffffff;
+    --border-color: #f3f4f6;
+}
+
+[data-theme='dark'] {
+    --bg-primary: #030712;
+    --text-primary: #f9fafb;
+    --card-bg: #111827;
+    --border-color: #1f2937;
+}
+
+[data-theme='glass'] {
+    --bg-primary: #eff6ff;
+    --text-primary: #1e3a8a;
+    --card-bg: rgba(255, 255, 255, 0.7);
+    --border-color: rgba(255, 255, 255, 0.3);
+}
+
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.glass-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+}
+
+/* Custom transitions for cards */
+.lesson-card-enter {
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.lesson-card-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 300ms, transform 300ms;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #e5e7eb;
+    border-radius: 10px;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb {
+    background: #374151;
+}

@@ -20,14 +20,14 @@ function generateGenericLessons(text: string, total: number) {
 
         lessons.push({
             dayNumber: i,
-            topic: sourceLine.length > 50 ? sourceLine.substring(0, 47) + "..." : sourceLine,
-            description: `A comprehensive session focusing on: ${sourceLine}. Students will engage in practical exercises and theoretical review.`,
-            objective: `Master the core concepts of ${sourceLine.substring(0, 30)} as outlined in the syllabus.`,
-            activities: [
+            topicTitle: sourceLine.length > 50 ? sourceLine.substring(0, 47) + "..." : sourceLine,
+            fiveMinuteSummary: `A comprehensive session focusing on: ${sourceLine}. Students will engage in practical exercises and theoretical review.`,
+            kidFriendlyExamples: [
                 "Detailed syllabus review and discussion",
                 "Practical application and group workshops",
                 "Progress check and Q&A session"
-            ]
+            ],
+            quiz: { questions: [] }
         });
     }
     return lessons;

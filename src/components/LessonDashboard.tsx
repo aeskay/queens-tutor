@@ -128,7 +128,7 @@ const LessonDashboard: React.FC<LessonDashboardProps> = ({ lessons, classId }) =
                                 <section className="mb-8 p-6 bg-green-50/50 rounded-2xl border border-green-100/30">
                                     <h4 className="text-xs font-bold text-green-600 uppercase tracking-widest mb-4">Classroom Activities</h4>
                                     <ul className="space-y-4">
-                                        {lesson.kidFriendlyExamples.map((example, i) => (
+                                        {(lesson.kidFriendlyExamples || []).map((example, i) => (
                                             <li key={i} className="flex gap-3 text-gray-700">
                                                 <span className="text-green-500 font-bold">•</span>
                                                 {example}

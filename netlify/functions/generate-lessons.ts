@@ -6,28 +6,53 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 /**
- * Fallback generator that doesn't use AI.
- * It simply divides the syllabus text into the requested number of days.
+ * Enhanced Fallback generator that doesn't use AI but is "smarter".
+ * Matches syllabus text to pedagogical categories.
  */
 function generateGenericLessons(text: string, total: number) {
     const lines = text.split('\n').filter(l => l.trim().length > 10).map(l => l.trim());
     const lessons = [];
 
+    // Simple category detector
+    const categories: Record<string, string[]> = {
+        grammar: ["Tense Review", "Sentence Structure", "Punctuation Mastery", "Grammatical Accuracy"],
+        vocabulary: ["Expanding Lexicon", "Idiomatic Expressions", "Contextual Meaning", "Word Choice"],
+        business: ["Formal Communication", "Professional Email Writing", "Presentation Skills", "Meeting Etiquette"],
+        phonics: ["Vowel Sounds", "Consonant Blends", "Pronunciation Workshop", "Intonation & Rhythm"]
+    };
+
     for (let i = 1; i <= total; i++) {
-        // Pick a line from the syllabus based on progress
         const textIndex = Math.min(Math.floor(((i - 1) / total) * lines.length), lines.length - 1);
-        const sourceLine = lines[textIndex] || "Curriculum Introduction";
+        const sourceLine = lines[textIndex] || "English Language Proficiency";
+
+        // Detect category or default to 'General'
+        let categoryKey = 'grammar';
+        const lowerLine = sourceLine.toLowerCase();
+        if (lowerLine.includes('business') || lowerLine.includes('work')) categoryKey = 'business';
+        else if (lowerLine.includes('sound') || lowerLine.includes('speak')) categoryKey = 'phonics';
+        else if (lowerLine.includes('word') || lowerLine.includes('vocab')) categoryKey = 'vocabulary';
+
+        const categoryWorkshops = categories[categoryKey] || categories.grammar;
+        const workshop = categoryWorkshops[(i - 1) % categoryWorkshops.length];
 
         lessons.push({
             dayNumber: i,
             topicTitle: sourceLine.length > 50 ? sourceLine.substring(0, 47) + "..." : sourceLine,
-            fiveMinuteSummary: `A comprehensive session focusing on: ${sourceLine}. Students will engage in practical exercises and theoretical review.`,
+            fiveMinuteSummary: `A comprehensive session focusing on ${sourceLine}. This module bridges the gap between theoretical knowledge and practical application using the ${workshop} framework.`,
             kidFriendlyExamples: [
-                "Detailed syllabus review and discussion",
-                "Practical application and group workshops",
-                "Progress check and Q&A session"
+                `${workshop}: Hands-on workshop focusing on practical usage.`,
+                "Interactive peer-review and feedback sessions.",
+                "Real-world application exercises based on syllabus requirements."
             ],
-            quiz: { questions: [] }
+            quiz: {
+                questions: [
+                    {
+                        question: `Which core aspect of ${sourceLine.substring(0, 20)} was emphasized today?`,
+                        options: [workshop, "General Overview", "Casual Conversation", "Theoretical History"],
+                        correctAnswer: workshop
+                    }
+                ]
+            }
         });
     }
     return lessons;
@@ -47,6 +72,7 @@ const handler: Handler = async (event) => {
         }
 
         const openaiKey = process.env.OPENAI_API_KEY;
+        const groqKey = process.env.GROQ_API_KEY;
         const deepseekKey = process.env.DEEPSEEK_API_KEY;
         const geminiKey = process.env.GEMINI_API_KEY;
 
@@ -81,7 +107,29 @@ const handler: Handler = async (event) => {
             }
         }
 
-        // --- 2. TRY DEEPSEEK ---
+        // --- 2. TRY GROQ (HIGH-SPEED FALLBACK) ---
+        if (groqKey) {
+            try {
+                console.log("-> Trying Groq (llama-3.3-70b-versatile)...");
+                const groq = new OpenAI({ apiKey: groqKey, baseURL: 'https://api.groq.com/openai/v1' });
+                const response = await groq.chat.completions.create({
+                    model: 'llama-3.3-70b-versatile',
+                    messages: [
+                        { role: 'system', content: 'You are an expert UK English Teacher. Output ONLY valid JSON.' },
+                        { role: 'user', content: `Generate a ${totalLessons}-day lesson plan in JSON array format for: ${text.substring(0, 15000)}` }
+                    ],
+                    response_format: { type: 'json_object' }
+                });
+                const content = response.choices[0].message.content || '[]';
+                console.log("-> SUCCESS: Groq");
+                return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: content };
+            } catch (err: any) {
+                console.error(`-> Groq Failed: ${err.message}`);
+                errors.push(`Groq: ${err.message}`);
+            }
+        }
+
+        // --- 3. TRY DEEPSEEK ---
         if (deepseekKey && deepseekKey.startsWith('sk-')) {
             try {
                 console.log("-> Trying DeepSeek (deepseek-chat)...");
@@ -103,17 +151,18 @@ const handler: Handler = async (event) => {
             }
         }
 
-        // --- 3. TRY GEMINI (FREE TIER) ---
+        // --- 4. TRY GEMINI (REFINED MODEL STRINGS) ---
         if (geminiKey) {
-            console.log("-> Trying Gemini Fallback...");
+            console.log("-> Trying Gemini Fallback (Standardized)...");
             const genAI = new GoogleGenerativeAI(geminiKey);
-            const geminiModels = ['gemini-1.5-flash', 'gemini-1.5-pro'];
+            // Using -latest and standard identifiers to avoid 404s
+            const geminiModels = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro-latest'];
 
             for (const modelName of geminiModels) {
                 try {
                     console.log(`   - Testing ${modelName}...`);
                     const model = genAI.getGenerativeModel({ model: modelName });
-                    const result = await model.generateContent(`Output only a JSON array of exactly ${totalLessons} lesson objects based on this syllabus. Syllabus: ${text.substring(0, 20000)}`);
+                    const result = await model.generateContent(`Output only a JSON array of exactly ${totalLessons} lesson objects based on this syllabus. Each object must have: topicTitle, fiveMinuteSummary, kidFriendlyExamples, and quiz. Syllabus: ${text.substring(0, 20000)}`);
                     const response = await result.response;
                     const responseText = response.text();
 
@@ -129,8 +178,8 @@ const handler: Handler = async (event) => {
             }
         }
 
-        // --- 4. ULTIMATE FALLBACK: NON-AI TEMPLATE ---
-        console.warn("!!! ALL AI PROVIDERS FAILED. USING NON-AI TEMPLATE FALLBACK !!!");
+        // --- 5. ULTIMATE FALLBACK: IMPROVED NON-AI TEMPLATE ---
+        console.warn("!!! ALL AI PROVIDERS FAILED. USING SMART TEMPLATE FALLBACK !!!");
         const fallbackLessons = generateGenericLessons(text, totalLessons);
         return {
             statusCode: 200,

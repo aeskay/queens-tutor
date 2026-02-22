@@ -1,11 +1,22 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, type User } from 'firebase/auth';
+import {
+    onAuthStateChanged,
+    signInWithPopup,
+    GoogleAuthProvider,
+    signOut,
+    type User,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    updateProfile
+} from 'firebase/auth';
 import { auth } from '../firebase/config';
 
 interface AuthContextType {
     user: User | null;
     loading: boolean;
     loginWithGoogle: () => Promise<void>;
+    loginWithEmail: (email: string, pass: string) => Promise<void>;
+    signupWithEmail: (email: string, pass: string, name: string) => Promise<void>;
     logout: () => Promise<void>;
 }
 
@@ -28,10 +39,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await signInWithPopup(auth, provider);
     };
 
+    const loginWithEmail = async (email: string, pass: string) => {
+        await signInWithEmailAndPassword(auth, email, pass);
+    };
+
+    const signupWithEmail = async (email: string, pass: string, name: string) => {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+        await updateProfile(userCredential.user, { displayName: name });
+        // Force refresh user to get displayName
+        setUser({ ...userCredential.user, displayName: name });
+    };
+
     const logout = () => signOut(auth);
 
     return (
-        <AuthContext.Provider value={{ user, loading, loginWithGoogle, logout }}>
+        <AuthContext.Provider value={{ user, loading, loginWithGoogle, loginWithEmail, signupWithEmail, logout }}>
             {!loading && children}
         </AuthContext.Provider>
     );

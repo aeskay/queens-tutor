@@ -21,6 +21,7 @@ const Dashboard: React.FC = () => {
     const { user, logout } = useAuth();
     const { theme, setTheme } = useTheme();
     const navigate = useNavigate();
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [classes, setClasses] = useState<ClassData[]>([]);
     const [loading, setLoading] = useState(true);
@@ -82,27 +83,19 @@ const Dashboard: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4 py-10">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
                 <div>
-                    <h1 className="text-4xl font-black text-blue-900 tracking-tight">Welcome, {user?.displayName?.split(' ')[0]}!</h1>
+                    <h1 className="text-4xl font-black text-blue-900 tracking-tight">Welcome, {user?.displayName?.split(' ')[0] || 'Teacher'}!</h1>
                     <p className="text-gray-500 font-medium">You have {classes.length} active class{classes.length !== 1 ? 'es' : ''}.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-4">
-                    <div className="flex bg-gray-100 p-1.5 rounded-2xl shadow-inner">
-                        {(['light', 'dark', 'glass'] as const).map((t) => (
-                            <button
-                                key={t}
-                                onClick={() => setTheme(t)}
-                                className={`px-5 py-2 rounded-xl text-xs font-black capitalize transition-all ${theme === t ? 'bg-white shadow-md text-blue-600' : 'text-gray-400 hover:text-gray-600'
-                                    }`}
-                            >
-                                {t}
-                            </button>
-                        ))}
-                    </div>
                     <button
-                        onClick={logout}
-                        className="text-gray-400 hover:text-red-500 font-bold text-sm transition-colors px-2"
+                        onClick={() => setIsSettingsOpen(true)}
+                        className="bg-gray-100 p-4 rounded-2xl text-gray-400 hover:text-blue-600 hover:bg-white hover:shadow-lg transition-all active:scale-95"
+                        title="Settings"
                     >
-                        Logout
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
                     </button>
                     <button
                         onClick={() => setIsModalOpen(true)}
@@ -115,6 +108,68 @@ const Dashboard: React.FC = () => {
                     </button>
                 </div>
             </header>
+
+            {/* Settings Modal */}
+            {isSettingsOpen && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-sm w-full p-8 animate-in fade-in zoom-in duration-200">
+                        <div className="flex justify-between items-center mb-8">
+                            <h2 className="text-2xl font-black text-blue-900 uppercase tracking-tight">Settings</h2>
+                            <button onClick={() => setIsSettingsOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div className="space-y-8">
+                            <div>
+                                <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] mb-4">Appearance</h3>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {(['light', 'dark', 'glass'] as const).map((t) => (
+                                        <button
+                                            key={t}
+                                            onClick={() => setTheme(t)}
+                                            className={`py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${theme === t
+                                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-100'
+                                                : 'bg-gray-50 text-gray-400 hover:bg-gray-100'
+                                                }`}
+                                        >
+                                            {t}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] mb-4">Account</h3>
+                                <div className="bg-gray-50 p-4 rounded-2xl mb-4 flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center font-black">
+                                        {user?.displayName?.[0] || user?.email?.[0]?.toUpperCase() || 'T'}
+                                    </div>
+                                    <div className="overflow-hidden">
+                                        <p className="font-bold text-sm text-gray-800 truncate">{user?.displayName || 'Tutor User'}</p>
+                                        <p className="text-[10px] font-bold text-gray-400 truncate">{user?.email}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setIsSettingsOpen(false);
+                                        logout();
+                                    }}
+                                    className="w-full py-4 rounded-2xl bg-red-50 text-red-500 font-black text-xs uppercase tracking-[0.2em] hover:bg-red-500 hover:text-white transition-all active:scale-95"
+                                >
+                                    Log Out
+                                </button>
+                            </div>
+                        </div>
+
+                        <p className="mt-8 text-center text-[10px] font-bold text-gray-200 uppercase tracking-widest">
+                            Built with Triple-AI Fallback
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {error && (
                 <div className="bg-red-50 border border-red-100 text-red-600 p-6 rounded-3xl mb-10 font-bold flex flex-col gap-2 shadow-sm shadow-red-50">

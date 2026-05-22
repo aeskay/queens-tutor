@@ -90,12 +90,16 @@ const ClassDetail: React.FC = () => {
 
             let response;
             try {
+                // Phase 1: generate outlines only (titles + summaries).
+                // This uses ~600 output tokens for 20 lessons vs ~15,000 for full content.
+                // Full lesson detail is generated on-demand when the user opens each lesson.
                 response = await fetch('/.netlify/functions/generate-lessons', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         text: extractedText,
                         totalLessons: classData.totalLessons || 20,
+                        outlineOnly: true,  // ← Phase 1: lightweight
                     }),
                 });
             } catch (networkError) {

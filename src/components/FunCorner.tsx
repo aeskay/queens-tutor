@@ -15,17 +15,17 @@ const FunCorner: React.FC = () => {
         <div className="min-h-screen bg-slate-50 flex flex-col">
             {/* ── Navbar ── */}
             <nav className="bg-white border-b border-slate-100 sticky top-0 z-30 shrink-0">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-y-3">
+                    <div className="flex items-center gap-3 w-1/2 md:w-auto">
+                        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
                             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
-                        <span className="font-black text-slate-900 text-lg" style={{ fontFamily: 'Outfit, sans-serif' }}>Fun Corner</span>
+                        <span className="font-black text-slate-900 text-lg truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>Fun Corner</span>
                     </div>
 
-                    <div className="flex gap-1 md:gap-4 absolute left-1/2 -translate-x-1/2">
+                    <div className="flex gap-1 sm:gap-4 order-3 md:order-none w-full md:w-auto justify-center md:absolute md:left-1/2 md:-translate-x-1/2">
                         <button 
                             onClick={() => navigate('/')}
                             className="px-4 py-2 rounded-full text-sm font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all"
@@ -37,11 +37,11 @@ const FunCorner: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 w-1/2 md:w-auto justify-end">
                         <div
                             onClick={logout}
                             title="Sign out"
-                            className="w-9 h-9 bg-slate-200 rounded-xl flex items-center justify-center text-slate-600 font-bold text-sm cursor-pointer hover:bg-slate-300 transition-colors"
+                            className="w-9 h-9 bg-slate-200 rounded-xl flex items-center justify-center text-slate-600 font-bold text-sm cursor-pointer hover:bg-slate-300 transition-colors shrink-0"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                         </div>

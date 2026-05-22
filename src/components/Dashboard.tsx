@@ -108,17 +108,17 @@ const Dashboard: React.FC = () => {
         <div className="min-h-screen bg-slate-50 flex flex-col">
             {/* ── Navbar ── */}
             <nav className="bg-white border-b border-slate-100 sticky top-0 z-30 shrink-0">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-y-3">
+                    <div className="flex items-center gap-3 w-1/2 md:w-auto">
+                        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
                             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                             </svg>
                         </div>
-                        <span className="font-black text-slate-900 text-lg" style={{ fontFamily: 'Outfit, sans-serif' }}>Queen's Classes</span>
+                        <span className="font-black text-slate-900 text-lg truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>Queen's Classes</span>
                     </div>
 
-                    <div className="flex gap-1 md:gap-4 absolute left-1/2 -translate-x-1/2">
+                    <div className="flex gap-1 sm:gap-4 order-3 md:order-none w-full md:w-auto justify-center md:absolute md:left-1/2 md:-translate-x-1/2">
                         <div className="px-4 py-2 bg-slate-100 rounded-full text-sm font-bold text-slate-900">
                             My Classes
                         </div>
@@ -130,10 +130,10 @@ const Dashboard: React.FC = () => {
                         </button>
                     </div>
 
-                    <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 w-1/2 md:w-auto justify-end">
                         <div
                             onClick={() => setIsSettingsOpen(true)}
-                            className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-sm cursor-pointer hover:bg-blue-700 transition-colors"
+                            className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-sm cursor-pointer hover:bg-blue-700 transition-colors shrink-0"
                         >
                             {user?.displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'T'}
                         </div>

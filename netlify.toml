@@ -5,6 +5,9 @@
 [dev]
   port = 8889
 
+[[edge_functions]]
+  path = "/.netlify/functions/generate-lessons"
+  function = "generate-lessons"
 
 [functions]
   directory = "netlify/functions"

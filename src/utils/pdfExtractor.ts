@@ -1,11 +1,11 @@
 import * as pdfjs from 'pdfjs-dist';
 
-// Use a version-matched CDN for the worker to avoid local pathing issues in netlify dev
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@5.4.624/build/pdf.worker.min.mjs`;
+// Use the CDN with the exact matching version to avoid Vite crashing when proxying the worker
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 export async function extractTextFromPDF(file: File): Promise<string> {
     const arrayBuffer = await file.arrayBuffer();
-    const loadingTask = pdfjs.getDocument(arrayBuffer);
+    const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
     const pdf = await loadingTask.promise;
     let fullText = '';
 

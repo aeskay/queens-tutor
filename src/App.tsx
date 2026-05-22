@@ -5,6 +5,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import ClassDetail from './components/ClassDetail';
+import FunCorner from './components/FunCorner';
 
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
@@ -31,6 +32,10 @@ const AppContent: React.FC = () => {
         <Route
           path="/class/:classId"
           element={user ? <ClassDetail /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/fun-corner"
+          element={user ? <FunCorner /> : <Navigate to="/login" />}
         />
       </Routes>
     </Router>

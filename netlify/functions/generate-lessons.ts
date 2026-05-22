@@ -2,62 +2,84 @@ import { Handler } from '@netlify/functions';
 import OpenAI from 'openai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as dotenv from 'dotenv';
+import * as https from 'https';
 
 dotenv.config();
 
-/**
- * Enhanced Fallback generator that doesn't use AI but is "smarter".
- * Matches syllabus text to pedagogical categories.
- */
-function generateGenericLessons(text: string, total: number) {
-    const lines = text.split('\n').filter(l => l.trim().length > 10).map(l => l.trim());
-    const lessons = [];
+// ─── Unified JSON parser ─────────────────────────────────────────────────────
+// Handles: plain array, wrapped object {"lessons":[...]}, or raw text with JSON inside
+function extractLessonsArray(raw: string): any[] | null {
+    // Trim markdown code fences if present
+    const cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
 
-    // Simple category detector
-    const categories: Record<string, string[]> = {
-        grammar: ["Tense Review", "Sentence Structure", "Punctuation Mastery", "Grammatical Accuracy"],
-        vocabulary: ["Expanding Lexicon", "Idiomatic Expressions", "Contextual Meaning", "Word Choice"],
-        business: ["Formal Communication", "Professional Email Writing", "Presentation Skills", "Meeting Etiquette"],
-        phonics: ["Vowel Sounds", "Consonant Blends", "Pronunciation Workshop", "Intonation & Rhythm"]
-    };
-
-    for (let i = 1; i <= total; i++) {
-        const textIndex = Math.min(Math.floor(((i - 1) / total) * lines.length), lines.length - 1);
-        const sourceLine = lines[textIndex] || "English Language Proficiency";
-
-        // Detect category or default to 'General'
-        let categoryKey = 'grammar';
-        const lowerLine = sourceLine.toLowerCase();
-        if (lowerLine.includes('business') || lowerLine.includes('work')) categoryKey = 'business';
-        else if (lowerLine.includes('sound') || lowerLine.includes('speak')) categoryKey = 'phonics';
-        else if (lowerLine.includes('word') || lowerLine.includes('vocab')) categoryKey = 'vocabulary';
-
-        const categoryWorkshops = categories[categoryKey] || categories.grammar;
-        const workshop = categoryWorkshops[(i - 1) % categoryWorkshops.length];
-
-        lessons.push({
-            dayNumber: i,
-            topicTitle: sourceLine.length > 50 ? sourceLine.substring(0, 47) + "..." : sourceLine,
-            fiveMinuteSummary: `A comprehensive session focusing on ${sourceLine}. This module bridges the gap between theoretical knowledge and practical application using the ${workshop} framework.`,
-            kidFriendlyExamples: [
-                `${workshop}: Hands-on workshop focusing on practical usage.`,
-                "Interactive peer-review and feedback sessions.",
-                "Real-world application exercises based on syllabus requirements."
-            ],
-            quiz: {
-                questions: [
-                    {
-                        question: `Which core aspect of ${sourceLine.substring(0, 20)} was emphasized today?`,
-                        options: [workshop, "General Overview", "Casual Conversation", "Theoretical History"],
-                        correctAnswer: workshop
-                    }
-                ]
+    try {
+        const parsed = JSON.parse(cleaned);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        // Wrapped object: find the first array value
+        if (typeof parsed === 'object' && !Array.isArray(parsed) && parsed !== null) {
+            // Check if it's actually a single lesson object
+            if (parsed.topicTitle && parsed.detailedLesson) {
+                return [parsed];
             }
-        });
+            for (const key of Object.keys(parsed)) {
+                if (Array.isArray(parsed[key]) && parsed[key].length > 0) {
+                    return parsed[key];
+                }
+            }
+        }
+    } catch {
+        // Fall through to regex extraction
     }
-    return lessons;
+
+    // Last resort: extract a JSON array from anywhere in the text
+    const match = cleaned.match(/\[[\s\S]*\]/);
+    if (match) {
+        try {
+            const arr = JSON.parse(match[0]);
+            if (Array.isArray(arr) && arr.length > 0) return arr;
+        } catch { /* ignore */ }
+    }
+
+    const objectMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (objectMatch) {
+        try {
+            const obj = JSON.parse(objectMatch[0]);
+            if (obj.topicTitle && obj.detailedLesson) return [obj];
+        } catch { /* ignore */ }
+    }
+
+    return null;
 }
 
+// ─── Prompt builder ──────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are an expert UK English Teacher with 20 years of classroom experience.
+You create detailed, engaging, and pedagogically sound lesson plans.
+You ALWAYS output ONLY valid JSON — no markdown fences, no explanatory text, just the raw JSON.`;
+
+const LESSON_SCHEMA = `Each lesson object MUST have ALL of these fields:
+- "dayNumber": number
+- "topicTitle": string (concise, descriptive title)
+- "fiveMinuteSummary": string (2–3 sentences a teacher reads aloud before class to frame the lesson)
+- "detailedLesson": string (4–6 paragraphs of rich, practical teaching content with examples and strategies; separate paragraphs with \\n\\n)
+- "kidFriendlyExamples": array of exactly 3 strings (each is a concrete classroom activity or exercise with clear instructions)
+- "quiz": object with a "questions" array of 5 to 10 questions (depending on the richness and depth of the topic, with a minimum of 5 and maximum of 10), each having:
+    - "question": string
+    - "options": array of exactly 4 strings
+    - "correctAnswer": string (must exactly match one of the options)
+    - "explanation": string (why the answer is correct, 2–3 sentences)`;
+
+function buildPrompt(totalLessons: number, text: string, context: string): string {
+    return `Generate a JSON array of exactly ${totalLessons} lesson plan object(s) based on the syllabus below.${context ? `\n\nSPECIFIC INSTRUCTION: ${context}` : ''}
+
+${LESSON_SCHEMA}
+
+Return ONLY the JSON array [...]. No wrapper object, no markdown, no extra text.
+
+SYLLABUS:
+${text.substring(0, 28000)}`;
+}
+
+// ─── Handler ─────────────────────────────────────────────────────────────────
 const handler: Handler = async (event) => {
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
@@ -66,125 +88,236 @@ const handler: Handler = async (event) => {
     const errors: string[] = [];
 
     try {
-        const { text, totalLessons = 20 } = JSON.parse(event.body || '{}');
-        if (!text) {
-            return { statusCode: 400, body: JSON.stringify({ error: 'Missing text content' }) };
+        const { text, totalLessons = 20, context = '' } = JSON.parse(event.body || '{}');
+
+        if (!text || text.trim().length < 10) {
+            return { statusCode: 400, body: JSON.stringify({ error: 'Missing or too-short syllabus text. Please upload a valid PDF.' }) };
         }
 
-        const openaiKey = process.env.OPENAI_API_KEY;
         const groqKey = process.env.GROQ_API_KEY;
-        const deepseekKey = process.env.DEEPSEEK_API_KEY;
         const geminiKey = process.env.GEMINI_API_KEY;
+        const openaiKey = process.env.OPENAI_API_KEY;
+        const deepseekKey = process.env.DEEPSEEK_API_KEY;
+        const cfAccountId = process.env.CF_ACCOUNT_ID;
+        const cfApiToken = process.env.CF_API_TOKEN;
+        const mistralKey = process.env.MISTRAL_API_KEY;
 
+        const userPrompt = buildPrompt(Number(totalLessons), text, context);
         console.log(`[START] Generating ${totalLessons} lessons. Text length: ${text.length}`);
 
-        // --- 1. TRY OPENAI (PRIORITY) ---
-        if (openaiKey && openaiKey.startsWith('sk-')) {
-            try {
-                console.log("-> Trying OpenAI (gpt-4o-mini)...");
-                const openai = new OpenAI({ apiKey: openaiKey });
-                const response = await openai.chat.completions.create({
-                    model: 'gpt-4o-mini',
-                    messages: [
-                        { role: 'system', content: 'You are an expert UK English Teacher. Output only a JSON array of lesson objects.' },
-                        { role: 'user', content: `Generate a JSON array of exactly ${totalLessons} lesson objects for this syllabus: ${text.substring(0, 30000)}` }
-                    ],
-                    response_format: { type: 'json_object' }
-                });
-                let content = response.choices[0].message.content || '[]';
+        // ── 1. GROQ (free, fast, primary) ────────────────────────────────────
+        if (groqKey && groqKey.startsWith('gsk_')) {
+            // Each model has different limits; small models need shorter text
+            const groqModels = [
+                { name: 'llama-3.3-70b-versatile', maxChars: 28000 }, // 100k TPD, large ctx
+                { name: 'llama-3.1-8b-instant',    maxChars: 4000  }, // 6k TPM limit, needs short text
+            ];
+            for (const { name: groqModel, maxChars } of groqModels) {
                 try {
-                    const parsed = JSON.parse(content);
-                    const keys = Object.keys(parsed);
-                    if (!Array.isArray(parsed) && keys.length === 1 && Array.isArray(parsed[keys[0]])) {
-                        content = JSON.stringify(parsed[keys[0]]);
+                    console.log(`-> Trying Groq (${groqModel})...`);
+                    const groq = new OpenAI({ apiKey: groqKey, baseURL: 'https://api.groq.com/openai/v1', timeout: 10000 });
+                    const trimmedPrompt = buildPrompt(Number(totalLessons), text.substring(0, maxChars), context);
+                    const response = await groq.chat.completions.create({
+                        model: groqModel,
+                        messages: [
+                            { role: 'system', content: SYSTEM_PROMPT },
+                            { role: 'user', content: trimmedPrompt },
+                        ],
+                        response_format: { type: 'json_object' },
+                        temperature: 0.7,
+                        max_tokens: 8000,
+                    });
+                    const content = response.choices[0].message.content || '';
+                    const lessons = extractLessonsArray(content);
+                    if (lessons && lessons.length > 0) {
+                        console.log(`-> SUCCESS: Groq/${groqModel} (${lessons.length} lessons)`);
+                        return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lessons) };
                     }
-                } catch (e) { }
-                console.log("-> SUCCESS: OpenAI");
-                return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: content };
-            } catch (err: any) {
-                console.error(`-> OpenAI Failed: ${err.message}`);
-                errors.push(`OpenAI: ${err.message}`);
-            }
-        }
-
-        // --- 2. TRY GROQ (HIGH-SPEED FALLBACK) ---
-        if (groqKey) {
-            try {
-                console.log("-> Trying Groq (llama-3.3-70b-versatile)...");
-                const groq = new OpenAI({ apiKey: groqKey, baseURL: 'https://api.groq.com/openai/v1' });
-                const response = await groq.chat.completions.create({
-                    model: 'llama-3.3-70b-versatile',
-                    messages: [
-                        { role: 'system', content: 'You are an expert UK English Teacher. Output ONLY valid JSON.' },
-                        { role: 'user', content: `Generate a ${totalLessons}-day lesson plan in JSON array format for: ${text.substring(0, 15000)}` }
-                    ],
-                    response_format: { type: 'json_object' }
-                });
-                const content = response.choices[0].message.content || '[]';
-                console.log("-> SUCCESS: Groq");
-                return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: content };
-            } catch (err: any) {
-                console.error(`-> Groq Failed: ${err.message}`);
-                errors.push(`Groq: ${err.message}`);
-            }
-        }
-
-        // --- 3. TRY DEEPSEEK ---
-        if (deepseekKey && deepseekKey.startsWith('sk-')) {
-            try {
-                console.log("-> Trying DeepSeek (deepseek-chat)...");
-                const ds = new OpenAI({ apiKey: deepseekKey, baseURL: 'https://api.deepseek.com' });
-                const response = await ds.chat.completions.create({
-                    model: 'deepseek-chat',
-                    messages: [
-                        { role: 'system', content: 'You are a helpful assistant that outputs only JSON.' },
-                        { role: 'user', content: `Generate a ${totalLessons}-day lesson plan in JSON. Text: ${text.substring(0, 30000)}` }
-                    ],
-                    response_format: { type: 'json_object' }
-                });
-                const content = response.choices[0].message.content || '[]';
-                console.log("-> SUCCESS: DeepSeek");
-                return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: content };
-            } catch (err: any) {
-                console.error(`-> DeepSeek Failed: ${err.message}`);
-                errors.push(`DeepSeek: ${err.message}`);
-            }
-        }
-
-        // --- 4. TRY GEMINI (REFINED MODEL STRINGS) ---
-        if (geminiKey) {
-            console.log("-> Trying Gemini Fallback (Standardized)...");
-            const genAI = new GoogleGenerativeAI(geminiKey);
-            // Using -latest and standard identifiers to avoid 404s
-            const geminiModels = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-1.5-pro-latest'];
-
-            for (const modelName of geminiModels) {
-                try {
-                    console.log(`   - Testing ${modelName}...`);
-                    const model = genAI.getGenerativeModel({ model: modelName });
-                    const result = await model.generateContent(`Output only a JSON array of exactly ${totalLessons} lesson objects based on this syllabus. Each object must have: topicTitle, fiveMinuteSummary, kidFriendlyExamples, and quiz. Syllabus: ${text.substring(0, 20000)}`);
-                    const response = await result.response;
-                    const responseText = response.text();
-
-                    const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-                    const cleanJson = jsonMatch ? jsonMatch[0] : responseText;
-
-                    console.log(`-> SUCCESS: Gemini (${modelName})`);
-                    return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: cleanJson };
-                } catch (geminiErr: any) {
-                    console.error(`   - ${modelName} failed: ${geminiErr.message}`);
-                    errors.push(`Gemini (${modelName}): ${geminiErr.message}`);
+                    errors.push(`Groq/${groqModel}: returned empty or invalid lessons array`);
+                    break;
+                } catch (err: any) {
+                    console.error(`-> Groq/${groqModel} failed: ${err.message}`);
+                    errors.push(`Groq/${groqModel}: ${err.message}`);
+                    // Keep trying smaller models on rate-limit or decommission
+                    if (
+                        (err.message && err.message.includes('decommissioned')) ||
+                        (err.message && err.message.toLowerCase().includes('rate limit') && err.message.includes('tokens per day')) ||
+                        (err.message && err.message.includes('Request too large'))
+                    ) continue;
+                    break; // Any other error (auth, network), stop trying Groq
                 }
             }
         }
 
-        // --- 5. ULTIMATE FALLBACK: IMPROVED NON-AI TEMPLATE ---
-        console.warn("!!! ALL AI PROVIDERS FAILED. USING SMART TEMPLATE FALLBACK !!!");
-        const fallbackLessons = generateGenericLessons(text, totalLessons);
+        // ── 2. GEMINI (free tier) ─────────────────────────────────────────────
+        if (geminiKey) {
+            console.log('-> Trying Gemini...');
+            const genAI = new GoogleGenerativeAI(geminiKey);
+            // Use current stable model names (2025)
+            const geminiModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest'];
+
+            for (const modelName of geminiModels) {
+                try {
+                    console.log(`   - Testing ${modelName}...`);
+                    const model = genAI.getGenerativeModel({
+                        model: modelName,
+                        generationConfig: {
+                            responseMimeType: 'application/json',
+                            temperature: 0.7,
+                        } as any,
+                    });
+                    const result = await model.generateContent(SYSTEM_PROMPT + '\n\n' + userPrompt);
+                    const responseText = result.response.text();
+                    const lessons = extractLessonsArray(responseText);
+                    if (lessons && lessons.length > 0) {
+                        console.log(`-> SUCCESS: Gemini/${modelName} (${lessons.length} lessons)`);
+                        return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lessons) };
+                    }
+                    errors.push(`Gemini/${modelName}: returned empty/invalid lessons`);
+                } catch (err: any) {
+                    console.error(`   - ${modelName} failed: ${err.message}`);
+                    errors.push(`Gemini/${modelName}: ${err.message}`);
+                }
+            }
+        }
+
+        // ── 3. OPENAI ────────────────────────────────────────────────────────
+        if (openaiKey && openaiKey.startsWith('sk-')) {
+            try {
+                console.log('-> Trying OpenAI (gpt-4o-mini)...');
+                const openai = new OpenAI({ apiKey: openaiKey, timeout: 12000 });
+                const trimmedPrompt = buildPrompt(Number(totalLessons), text.substring(0, 24000), context);
+                const response = await openai.chat.completions.create({
+                    model: 'gpt-4o-mini',
+                    messages: [
+                        { role: 'system', content: SYSTEM_PROMPT },
+                        { role: 'user', content: trimmedPrompt },
+                    ],
+                    response_format: { type: 'json_object' },
+                    temperature: 0.7,
+                });
+                const content = response.choices[0].message.content || '';
+                const lessons = extractLessonsArray(content);
+                if (lessons && lessons.length > 0) {
+                    console.log(`-> SUCCESS: OpenAI (${lessons.length} lessons)`);
+                    return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lessons) };
+                }
+                errors.push('OpenAI: returned empty or invalid lessons array');
+            } catch (err: any) {
+                console.error(`-> OpenAI failed: ${err.message}`);
+                errors.push(`OpenAI: ${err.message}`);
+            }
+        }
+
+        // ── 4. CLOUDFLARE WORKERS AI (free, no billing needed) ────────────────────
+        if (cfAccountId && cfApiToken) {
+            try {
+                console.log('-> Trying Cloudflare Workers AI...');
+                const cfResponse = await new Promise<string>((resolve, reject) => {
+                    const body = JSON.stringify({
+                        messages: [
+                            { role: 'system', content: SYSTEM_PROMPT },
+                            { role: 'user', content: userPrompt },
+                        ],
+                    });
+                    const options = {
+                        hostname: 'api.cloudflare.com',
+                        path: `/client/v4/accounts/${cfAccountId}/ai/run/@cf/meta/llama-3.1-8b-instruct`,
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${cfApiToken}`,
+                            'Content-Type': 'application/json',
+                            'Content-Length': Buffer.byteLength(body),
+                        },
+                    };
+                    const req = https.request(options, (res) => {
+                        let data = '';
+                        res.on('data', (chunk) => data += chunk);
+                        res.on('end', () => resolve(data));
+                    });
+                    req.on('error', reject);
+                    req.write(body);
+                    req.end();
+                });
+                const cfData = JSON.parse(cfResponse);
+                if (cfData.success && cfData.result?.response) {
+                    const lessons = extractLessonsArray(cfData.result.response);
+                    if (lessons && lessons.length > 0) {
+                        console.log(`-> SUCCESS: Cloudflare (${lessons.length} lessons)`);
+                        return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lessons) };
+                    }
+                }
+                errors.push('Cloudflare: returned empty/invalid lessons');
+            } catch (err: any) {
+                console.error(`-> Cloudflare failed: ${err.message}`);
+                errors.push(`Cloudflare: ${err.message}`);
+            }
+        }
+
+        // ── 5. MISTRAL (free tier available) ─────────────────────────────────
+        if (mistralKey) {
+            try {
+                console.log('-> Trying Mistral...');
+                const mistral = new OpenAI({ apiKey: mistralKey, baseURL: 'https://api.mistral.ai/v1', timeout: 15000 });
+                const trimmedPrompt = buildPrompt(Number(totalLessons), text.substring(0, 24000), context);
+                const response = await mistral.chat.completions.create({
+                    model: 'mistral-small-latest',
+                    messages: [
+                        { role: 'system', content: SYSTEM_PROMPT },
+                        { role: 'user', content: trimmedPrompt },
+                    ],
+                    response_format: { type: 'json_object' },
+                    temperature: 0.7,
+                });
+                const content = response.choices[0].message.content || '';
+                const lessons = extractLessonsArray(content);
+                if (lessons && lessons.length > 0) {
+                    console.log(`-> SUCCESS: Mistral (${lessons.length} lessons)`);
+                    return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lessons) };
+                }
+                errors.push('Mistral: returned empty or invalid lessons array');
+            } catch (err: any) {
+                console.error(`-> Mistral failed: ${err.message}`);
+                errors.push(`Mistral: ${err.message}`);
+            }
+        }
+
+        // ── 6. DEEPSEEK ──────────────────────────────────────────────────────
+        if (deepseekKey && deepseekKey.startsWith('sk-')) {
+            try {
+                console.log('-> Trying DeepSeek...');
+                const deepseek = new OpenAI({ apiKey: deepseekKey, baseURL: 'https://api.deepseek.com', timeout: 15000 });
+                const trimmedPrompt = buildPrompt(Number(totalLessons), text.substring(0, 16000), context);
+                const response = await deepseek.chat.completions.create({
+                    model: 'deepseek-chat',
+                    messages: [
+                        { role: 'system', content: SYSTEM_PROMPT },
+                        { role: 'user', content: trimmedPrompt },
+                    ],
+                    response_format: { type: 'json_object' },
+                });
+                const content = response.choices[0].message.content || '';
+                const lessons = extractLessonsArray(content);
+                if (lessons && lessons.length > 0) {
+                    console.log(`-> SUCCESS: DeepSeek (${lessons.length} lessons)`);
+                    return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lessons) };
+                }
+                errors.push('DeepSeek: returned empty or invalid lessons array');
+            } catch (err: any) {
+                console.error(`-> DeepSeek failed: ${err.message}`);
+                errors.push(`DeepSeek: ${err.message}`);
+            }
+        }
+
+        // ── All providers failed ─────────────────────────────────────────────
+        console.error('!!! ALL AI PROVIDERS FAILED !!!', errors);
         return {
-            statusCode: 200,
+            statusCode: 503,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(fallbackLessons)
+            body: JSON.stringify({
+                error: 'All AI providers failed. Please try again in a moment.',
+                details: errors,
+            }),
         };
 
     } catch (error: any) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
@@ -6,162 +6,434 @@ interface QuizQuestion {
     question: string;
     options: string[];
     correctAnswer: string;
+    explanation?: string;
 }
 
 interface LessonModule {
     dayNumber: number;
     topicTitle: string;
     fiveMinuteSummary: string;
+    detailedLesson?: string;
     kidFriendlyExamples: string[];
     completed?: boolean;
-    quiz: {
-        questions?: QuizQuestion[];
-    } | QuizQuestion[];
+    quiz: { questions?: QuizQuestion[] } | QuizQuestion[];
 }
 
 interface LessonDashboardProps {
     lessons: LessonModule[];
     classId?: string;
+    selectedDay: number;
+    onRegenerate?: (dayNumber: number) => Promise<void>;
+    isRegenerating?: boolean;
 }
 
-const LessonDashboard: React.FC<LessonDashboardProps> = ({ lessons, classId }) => {
-    const [openDay, setOpenDay] = useState<number | null>(1);
+const LessonDashboard: React.FC<LessonDashboardProps> = ({ lessons, classId, selectedDay, onRegenerate, isRegenerating }) => {
     const [updatingDay, setUpdatingDay] = useState<number | null>(null);
+    const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
+    const [showResults, setShowResults] = useState<Record<number, boolean>>({});
 
-    const toggleDay = (day: number) => {
-        setOpenDay(openDay === day ? null : day);
+    const [isEditingSummary, setIsEditingSummary] = useState(false);
+    const [editSummaryText, setEditSummaryText] = useState('');
+    const [savingSummary, setSavingSummary] = useState(false);
+
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [editTitleText, setEditTitleText] = useState('');
+    const [savingTitle, setSavingTitle] = useState(false);
+
+    useEffect(() => {
+        setUserAnswers({});
+        setShowResults({});
+        setIsEditingSummary(false);
+        setIsEditingTitle(false);
+    }, [selectedDay]);
+
+    const handleSaveTitle = async () => {
+        if (!classId || !editTitleText.trim()) return;
+        setSavingTitle(true);
+        try {
+            const updated = lessons.map(l =>
+                l.dayNumber === selectedDay ? { ...l, topicTitle: editTitleText.trim() } : l
+            );
+            await updateDoc(doc(db, 'classes', classId), {
+                lessons: updated,
+            });
+            setIsEditingTitle(false);
+        } catch (err) {
+            console.error('Error saving title:', err);
+        } finally {
+            setSavingTitle(false);
+        }
+    };
+
+    const handleSaveSummary = async () => {
+        if (!classId) return;
+        setSavingSummary(true);
+        try {
+            const updated = lessons.map(l =>
+                l.dayNumber === selectedDay ? { ...l, fiveMinuteSummary: editSummaryText.trim() } : l
+            );
+            await updateDoc(doc(db, 'classes', classId), {
+                lessons: updated,
+            });
+            setIsEditingSummary(false);
+        } catch (err) {
+            console.error('Error saving summary:', err);
+        } finally {
+            setSavingSummary(false);
+        }
     };
 
     const toggleCompletion = async (dayNumber: number) => {
         if (!classId) return;
         setUpdatingDay(dayNumber);
-
         try {
-            const updatedLessons = lessons.map(lesson => {
-                if (lesson.dayNumber === dayNumber) {
-                    return { ...lesson, completed: !lesson.completed };
-                }
-                return lesson;
-            });
-
-            const completedCount = updatedLessons.filter(l => l.completed).length;
-
+            const updated = lessons.map(l =>
+                l.dayNumber === dayNumber ? { ...l, completed: !l.completed } : l
+            );
             await updateDoc(doc(db, 'classes', classId), {
-                lessons: updatedLessons,
-                completedLessons: completedCount
+                lessons: updated,
+                completedLessons: updated.filter(l => l.completed).length,
             });
-        } catch (error) {
-            console.error("Error updating lesson:", error);
+        } catch (err) {
+            console.error('Error updating lesson:', err);
         } finally {
             setUpdatingDay(null);
         }
     };
 
+    const handleOptionSelect = (qIdx: number, option: string) => {
+        if (showResults[qIdx]) return;
+        setUserAnswers(prev => ({ ...prev, [qIdx]: option }));
+        setShowResults(prev => ({ ...prev, [qIdx]: true }));
+    };
+
+    const lesson = lessons.find(l => l.dayNumber === selectedDay);
+    if (!lesson) return null;
+
+    const quizQuestions: QuizQuestion[] = Array.isArray(lesson.quiz)
+        ? lesson.quiz as QuizQuestion[]
+        : ((lesson.quiz as any)?.questions || []);
+
+    const completedQuiz = Object.keys(showResults).length;
+    const correctAnswers = Object.entries(showResults)
+        .filter(([i, shown]) => shown && userAnswers[Number(i)] === quizQuestions[Number(i)]?.correctAnswer)
+        .length;
+
+    const isNewModule = !lesson.detailedLesson || lesson.fiveMinuteSummary === 'Content to be generated.';
+
     return (
-        <div className="w-full max-w-2xl mx-auto mt-8 px-4 pb-20">
-            <h2 className="text-2xl font-bold text-blue-900 mb-6 flex items-center">
-                <svg className="w-8 h-8 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                </svg>
-                Course Modules
-            </h2>
-            <div className="space-y-4">
-                {lessons.map((lesson) => (
-                    <div key={lesson.dayNumber} className={`border rounded-3xl bg-white shadow-sm overflow-hidden transition-all ${lesson.completed ? 'border-green-100' : 'border-gray-100'}`}>
-                        <div className="w-full flex items-center">
+        <div className="max-w-3xl mx-auto pb-16">
+            {/* ── Lesson header ── */}
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8 pb-6 border-b border-slate-100">
+                <div className="flex-1 min-w-0">
+                    <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">Day {lesson.dayNumber}</span>
+                    {isEditingTitle ? (
+                        <div className="flex items-center gap-2 mt-2 w-full max-w-lg">
+                            <input
+                                type="text"
+                                value={editTitleText}
+                                onChange={(e) => setEditTitleText(e.target.value)}
+                                className="bg-slate-50 border border-slate-200 text-slate-800 text-lg font-bold px-3 py-1.5 rounded-xl focus:outline-none focus:border-blue-500 w-full font-sans"
+                                placeholder="Enter module title..."
+                                autoFocus
+                                onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
+                            />
                             <button
-                                onClick={() => toggleDay(lesson.dayNumber)}
-                                className="flex-1 text-left p-6 focus:outline-none flex justify-between items-center hover:bg-gray-50 transition-colors"
+                                onClick={handleSaveTitle}
+                                disabled={savingTitle || !editTitleText.trim()}
+                                className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl disabled:opacity-50 transition-colors shrink-0"
+                                title="Save Title"
                             >
-                                <div className="flex items-center gap-4">
-                                    <span className={`flex-shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center font-bold shadow-sm transition-colors ${lesson.completed ? 'bg-green-500 text-white' : 'bg-blue-600 text-white'}`}>
-                                        {lesson.completed ? (
-                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path>
-                                            </svg>
-                                        ) : lesson.dayNumber}
-                                    </span>
-                                    <span className={`text-lg font-bold transition-colors ${lesson.completed ? 'text-gray-400' : 'text-gray-800'}`}>
-                                        {lesson.topicTitle}
-                                    </span>
-                                </div>
-                                <svg
-                                    className={`w-6 h-6 text-gray-400 transition-transform ${openDay === lesson.dayNumber ? 'rotate-180' : ''}`}
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                                 </svg>
                             </button>
-                            <div className="pr-6">
+                            <button
+                                onClick={() => setIsEditingTitle(false)}
+                                disabled={savingTitle}
+                                className="p-2 border border-slate-200 hover:bg-slate-50 text-slate-500 rounded-xl disabled:opacity-50 transition-colors shrink-0"
+                                title="Cancel"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 mt-1 group/title w-full">
+                            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                                {lesson.topicTitle}
+                            </h1>
+                            <button
+                                onClick={() => { setEditTitleText(lesson.topicTitle); setIsEditingTitle(true); }}
+                                className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-50 transition-all shrink-0 opacity-60 hover:opacity-100"
+                                title="Edit Title"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                        </div>
+                    )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                    <button
+                        onClick={() => onRegenerate?.(lesson.dayNumber)}
+                        disabled={isRegenerating}
+                        title={isNewModule ? "Generate content for this lesson" : "Regenerate this lesson"}
+                        className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-semibold text-xs uppercase tracking-wide hover:bg-slate-200 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                        {isRegenerating ? (
+                            <div className="w-3.5 h-3.5 border-2 border-slate-500 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                        )}
+                        <span className="hidden sm:inline">{isNewModule ? 'Generate' : 'Regenerate'}</span>
+                    </button>
+                    <button
+                        onClick={() => toggleCompletion(lesson.dayNumber)}
+                        disabled={updatingDay === lesson.dayNumber}
+                        className={`px-4 py-2 rounded-xl font-semibold text-xs uppercase tracking-wide transition-all flex items-center gap-1.5 ${lesson.completed
+                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                            : 'bg-white text-slate-500 border border-slate-200 hover:border-emerald-200 hover:text-emerald-600 hover:bg-emerald-50'
+                            }`}
+                    >
+                        {updatingDay === lesson.dayNumber ? (
+                            <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={lesson.completed ? 3 : 2} d={lesson.completed ? "M5 13l4 4L19 7" : "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"} />
+                            </svg>
+                        )}
+                        {lesson.completed ? 'Done' : 'Mark Done'}
+                    </button>
+                </div>
+            </div>
+
+            <div className="space-y-6">
+                {/* ── 1. Summary ── */}
+                <section className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="h-1 w-full bg-gradient-to-r from-blue-500 to-indigo-600" />
+                    <div className="p-5 sm:p-8">
+                        <div className="flex items-center justify-between mb-4 w-full">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Overview</p>
+                                    <h3 className="text-base font-black text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>Summary</h3>
+                                </div>
+                            </div>
+                            {!isEditingSummary && (
                                 <button
-                                    onClick={() => toggleCompletion(lesson.dayNumber)}
-                                    disabled={updatingDay === lesson.dayNumber}
-                                    className={`p-2 rounded-xl transition-all ${lesson.completed
-                                        ? 'text-green-600 bg-green-50 hover:bg-green-100'
-                                        : 'text-gray-300 hover:text-green-500 hover:bg-gray-50'
-                                        }`}
-                                    title={lesson.completed ? "Mark as Incomplete" : "Mark as Completed"}
+                                    onClick={() => { setEditSummaryText(lesson.fiveMinuteSummary); setIsEditingSummary(true); }}
+                                    className="text-xs text-blue-600 hover:text-blue-700 font-bold uppercase tracking-wider flex items-center gap-1 transition-colors bg-blue-50 px-3 py-1.5 rounded-xl hover:bg-blue-100"
                                 >
-                                    {updatingDay === lesson.dayNumber ? (
-                                        <div className="w-6 h-6 border-2 border-green-500 border-t-transparent animate-spin rounded-full" />
-                                    ) : (
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                    )}
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Edit
                                 </button>
-                            </div>
+                            )}
                         </div>
-
-                        <div
-                            className={`transition-all duration-300 ease-in-out ${openDay === lesson.dayNumber ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 invisible'
-                                }`}
-                        >
-                            <div className="p-8 pt-0 border-t border-gray-50">
-                                <section className="mt-6 mb-8">
-                                    <h4 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-3">5-Minute Summary</h4>
-                                    <p className="text-gray-600 leading-relaxed text-lg">{lesson.fiveMinuteSummary}</p>
-                                </section>
-
-                                <section className="mb-8 p-6 bg-green-50/50 rounded-2xl border border-green-100/30">
-                                    <h4 className="text-xs font-bold text-green-600 uppercase tracking-widest mb-4">Classroom Activities</h4>
-                                    <ul className="space-y-4">
-                                        {(lesson.kidFriendlyExamples || []).map((example, i) => (
-                                            <li key={i} className="flex gap-3 text-gray-700">
-                                                <span className="text-green-500 font-bold">•</span>
-                                                {example}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </section>
-
-                                <section>
-                                    <h4 className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-4">Quick Assessment</h4>
-                                    <div className="grid gap-4">
-                                        {(Array.isArray(lesson.quiz) ? lesson.quiz : []).map((q, i) => (
-                                            <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-                                                <p className="font-bold text-gray-800 mb-4">{q.question}</p>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                    {q.options.map((option, oi) => (
-                                                        <div key={oi} className={`p-3 rounded-xl border text-sm transition-all ${option === q.correctAnswer
-                                                            ? 'border-green-200 bg-green-50 text-green-700 font-medium'
-                                                            : 'border-gray-100 bg-gray-50 text-gray-500'
-                                                            }`}>
-                                                            {option}
-                                                            {option === q.correctAnswer && <span className="ml-2">✓</span>}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </section>
+                        {isEditingSummary ? (
+                            <div className="space-y-3 mt-4">
+                                <textarea
+                                    value={editSummaryText}
+                                    onChange={(e) => setEditSummaryText(e.target.value)}
+                                    rows={5}
+                                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm p-4 rounded-2xl focus:outline-none focus:border-blue-500 font-medium leading-relaxed"
+                                    placeholder="Enter custom summary/context for this module..."
+                                />
+                                <div className="flex justify-end gap-2">
+                                    <button
+                                        onClick={() => setIsEditingSummary(false)}
+                                        disabled={savingSummary}
+                                        className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleSaveSummary}
+                                        disabled={savingSummary || !editSummaryText.trim()}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                                    >
+                                        {savingSummary ? (
+                                            <>
+                                                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                <span>Saving...</span>
+                                            </>
+                                        ) : (
+                                            <span>Save Changes</span>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            <p className="text-slate-700 leading-relaxed text-sm sm:text-base font-medium">
+                                {lesson.fiveMinuteSummary}
+                            </p>
+                        )}
                     </div>
-                ))}
+                </section>
+
+                {/* ── 2. Detailed Lesson ── */}
+                <section className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="h-1 w-full bg-gradient-to-r from-emerald-500 to-teal-600" />
+                    <div className="p-5 sm:p-8">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-9 h-9 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                </svg>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Deep Dive</p>
+                                <h3 className="text-base font-black text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>Detailed Lesson</h3>
+                            </div>
+                        </div>
+                        {lesson.detailedLesson ? (
+                            <div className="space-y-3 text-sm sm:text-base text-slate-700 leading-relaxed">
+                                {lesson.detailedLesson.split(/\n\n+/).filter(Boolean).map((para, i) => (
+                                    <p key={i} className={i === 0 ? 'font-medium' : ''}>{para.trim()}</p>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-slate-50 rounded-xl p-6 text-center border-2 border-dashed border-slate-200">
+                                <p className="text-slate-400 text-sm">No detailed content yet — click Regenerate to create it.</p>
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+                {/* ── 3. Classroom Activities ── */}
+                {(lesson.kidFriendlyExamples || []).length > 0 && (
+                    <section className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div className="h-1 w-full bg-gradient-to-r from-violet-500 to-purple-600" />
+                        <div className="p-5 sm:p-8">
+                            <div className="flex items-center gap-3 mb-5">
+                                <div className="w-9 h-9 bg-violet-50 text-violet-600 rounded-xl flex items-center justify-center shrink-0">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-violet-500 uppercase tracking-widest">Hands On</p>
+                                    <h3 className="text-base font-black text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>Classroom Activities</h3>
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                {(lesson.kidFriendlyExamples || []).map((ex, i) => (
+                                    <div key={i} className="flex gap-4 p-4 bg-violet-50/50 rounded-xl border border-violet-100/50">
+                                        <span className="w-7 h-7 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center font-black text-xs shrink-0">{i + 1}</span>
+                                        <p className="text-sm text-slate-700 leading-relaxed pt-0.5">{ex}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* ── 4. Quiz ── */}
+                <section className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="h-1 w-full bg-gradient-to-r from-amber-500 to-orange-500" />
+                    <div className="p-5 sm:p-8">
+                        <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Assessment</p>
+                                    <h3 className="text-base font-black text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>Knowledge Check</h3>
+                                </div>
+                            </div>
+                            {completedQuiz > 0 && quizQuestions.length > 0 && (
+                                <div className="text-right">
+                                    <span className="text-xs font-bold text-slate-500">{correctAnswers}/{completedQuiz} correct</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {quizQuestions.length > 0 ? (
+                            <div className="space-y-6">
+                                {quizQuestions.map((q, i) => {
+                                    const answered = showResults[i];
+                                    const selected = userAnswers[i];
+                                    const isCorrect = selected === q.correctAnswer;
+
+                                    return (
+                                        <div key={i} className="bg-slate-50 rounded-xl p-4 sm:p-6 border border-slate-100">
+                                            <div className="flex gap-3 mb-4">
+                                                <span className="text-xl font-black text-slate-200 leading-none shrink-0 mt-0.5">
+                                                    {String(i + 1).padStart(2, '0')}
+                                                </span>
+                                                <p className="font-bold text-slate-800 text-sm sm:text-base leading-snug select-none">
+                                                    {q.question}
+                                                </p>
+                                            </div>
+
+                                            <div className="grid gap-2">
+                                                {(q.options || []).map((opt, oi) => {
+                                                    const isSelected = selected === opt;
+                                                    const isCorrectOpt = opt === q.correctAnswer;
+                                                    let cls = 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 cursor-pointer';
+                                                    if (answered) {
+                                                        if (isCorrectOpt) cls = 'border-emerald-300 bg-emerald-50 text-emerald-800';
+                                                        else if (isSelected) cls = 'border-red-300 bg-red-50 text-red-700 opacity-80';
+                                                        else cls = 'border-slate-100 bg-white opacity-40';
+                                                    } else if (isSelected) {
+                                                        cls = 'border-blue-300 bg-blue-50 text-blue-800';
+                                                    }
+                                                    return (
+                                                        <button
+                                                            key={oi}
+                                                            disabled={!!answered}
+                                                            onClick={() => handleOptionSelect(i, opt)}
+                                                            className={`p-3.5 rounded-xl border-2 transition-all text-left flex items-center justify-between gap-3 text-sm font-medium ${cls}`}
+                                                        >
+                                                            <span>{opt}</span>
+                                                            {answered && isCorrectOpt && (
+                                                                <div className="w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center shrink-0">
+                                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                                                                </div>
+                                                            )}
+                                                            {answered && isSelected && !isCorrectOpt && (
+                                                                <div className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shrink-0">
+                                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
+                                                                </div>
+                                                            )}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {answered && (
+                                                <div className={`mt-4 p-4 rounded-xl border text-sm leading-relaxed ${isCorrect ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-blue-50 border-blue-100 text-blue-800'}`}>
+                                                    <p className="font-bold mb-1 text-xs uppercase tracking-wide opacity-70">
+                                                        {isCorrect ? '✓ Correct!' : `✗ The correct answer is: ${q.correctAnswer}`}
+                                                    </p>
+                                                    <p>{q.explanation || (isCorrect ? `"${q.correctAnswer}" is the right answer.` : `The correct answer is "${q.correctAnswer}".`)}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="text-center py-10 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                                <p className="text-slate-400 text-sm">No quiz for this module yet. Try regenerating it.</p>
+                            </div>
+                        )}
+                    </div>
+                </section>
             </div>
         </div>
     );

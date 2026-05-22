@@ -17,9 +17,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'apple-touch-icon.png'],
       manifest: {
-        name: "Queen's Tutors",
-        short_name: "Queen's Tutors",
-        description: "AI-powered lesson planning for English teachers — Queen's Tutors",
+        name: "Queen's Classes",
+        short_name: "Queen's Classes",
+        description: "AI-powered lesson planning for English teachers — Queen's Classes",
         theme_color: '#2563eb',
         background_color: '#ffffff',
         display: 'standalone',

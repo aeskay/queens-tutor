@@ -18,7 +18,7 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-controlled.svg'],
       manifest: {
         name: 'Teacher Management System',
-        short_name: 'TeacherMS',
+        short_name: 'Queen\'s Classes',
         description: 'Professional Lesson Management & AI Planning for English Teachers',
         theme_color: '#2563eb', // Matches the blue-600 color
         background_color: '#ffffff',

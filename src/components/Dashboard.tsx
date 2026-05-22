@@ -144,34 +144,100 @@ const Dashboard: React.FC = () => {
             {/* ── Settings Modal ── */}
             {isSettingsOpen && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setIsSettingsOpen(false)}>
-                    <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-8" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-black text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>Settings</h2>
+                            <h2 className="text-2xl font-black text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>Profile & Settings</h2>
                             <button onClick={() => setIsSettingsOpen(false)} className="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-all">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
                         </div>
-                        <div className="space-y-6">
+                        
+                        <div className="space-y-8">
+                            {/* ── Profile Section ── */}
                             <div>
-                                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Appearance</p>
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-blue-600/20">
+                                        {user?.displayName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'T'}
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-800 text-lg">{user?.displayName || 'Tutor'}</h3>
+                                        <p className="text-sm text-slate-500 font-medium">{user?.email}</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Display Name</label>
+                                        <input 
+                                            type="text" 
+                                            defaultValue={user?.displayName || ''}
+                                            placeholder="Your Name"
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-semibold text-slate-700"
+                                            onBlur={async (e) => {
+                                                const newName = e.target.value.trim();
+                                                if (newName && newName !== user?.displayName) {
+                                                    try {
+                                                        const { updateProfile } = await import('firebase/auth');
+                                                        if (user) await updateProfile(user, { displayName: newName });
+                                                    } catch (err) {
+                                                        console.error("Failed to update profile", err);
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Email Address</label>
+                                        <input 
+                                            type="email" 
+                                            value={user?.email || ''} 
+                                            disabled 
+                                            className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-sm font-semibold text-slate-400 cursor-not-allowed"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* ── Stats Section ── */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100 flex flex-col items-center justify-center text-center">
+                                    <span className="text-3xl font-black text-blue-600 mb-1">{students.length}</span>
+                                    <span className="text-xs font-bold uppercase tracking-wider text-blue-800/60">Students</span>
+                                </div>
+                                <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 flex flex-col items-center justify-center text-center">
+                                    <span className="text-3xl font-black text-indigo-600 mb-1">{classes.length}</span>
+                                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-800/60">Active Classes</span>
+                                </div>
+                            </div>
+
+                            <hr className="border-slate-100" />
+
+                            {/* ── Appearance ── */}
+                            <div>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Appearance</p>
                                 <div className="grid grid-cols-3 gap-2">
                                     {(['light', 'dark', 'glass'] as const).map((t) => (
                                         <button
                                             key={t}
                                             onClick={() => setTheme(t)}
-                                            className={`py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all capitalize ${theme === t ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                            className={`py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all capitalize ${theme === t ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20' : 'bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100'}`}
                                         >
                                             {t}
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                            <button
-                                onClick={() => { setIsSettingsOpen(false); logout(); }}
-                                className="w-full py-3 rounded-xl bg-red-50 text-red-600 font-semibold text-sm hover:bg-red-100 transition-all"
-                            >
-                                Sign Out
-                            </button>
+
+                            {/* ── Actions ── */}
+                            <div className="pt-2">
+                                <button
+                                    onClick={() => { setIsSettingsOpen(false); logout(); }}
+                                    className="w-full py-4 rounded-xl bg-red-50 text-red-600 font-bold text-sm hover:bg-red-100 hover:text-red-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                                    Sign Out Securely
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

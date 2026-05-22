@@ -210,24 +210,6 @@ const Dashboard: React.FC = () => {
                                 </div>
                             </div>
 
-                            <hr className="border-slate-100" />
-
-                            {/* ── Appearance ── */}
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Appearance</p>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {(['light', 'dark', 'glass'] as const).map((t) => (
-                                        <button
-                                            key={t}
-                                            onClick={() => setTheme(t)}
-                                            className={`py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all capitalize ${theme === t ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20' : 'bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100'}`}
-                                        >
-                                            {t}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
                             {/* ── Actions ── */}
                             <div className="pt-2">
                                 <button

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, onSnapshot, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import type { StudentData, ClassData } from '../types';
 import { useStudentMigration } from '../utils/useStudentMigration';
 
@@ -23,7 +22,6 @@ const ACCENT_COLORS = [
 
 const Dashboard: React.FC = () => {
     const { user, logout } = useAuth();
-    const { theme, setTheme } = useTheme();
     useStudentMigration(); // Runs migration silently on load
 
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);

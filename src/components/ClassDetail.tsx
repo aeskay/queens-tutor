@@ -152,12 +152,14 @@ const ClassDetail: React.FC = () => {
                 setIsExtracting(false);
             }
 
-            // For single-module generation, cap the syllabus to 12k chars to save tokens.
-            // The context field already tells the AI exactly what topic to generate.
-            const MAX_SINGLE_MODULE_CHARS = 12000;
+            // For single-module regeneration, keep the syllabus very short so it fits
+            // within Groq free-tier token limits (~3000 chars input budget).
+            const MAX_SINGLE_MODULE_CHARS = 3000;
+            const topicContext = `Generate content ONLY for Day ${dayNumber}: "${targetLesson?.topicTitle}". ${targetLesson?.fiveMinuteSummary && targetLesson.fiveMinuteSummary !== 'Content to be generated.' ? `Summary to include/expand on: "${targetLesson.fiveMinuteSummary}". ` : ''}Make it detailed and specific to this topic.`;
+            // If we have no syllabus, build a short stub that tells the AI what to write about
             const textToSend = syllabusText
                 ? syllabusText.substring(0, MAX_SINGLE_MODULE_CHARS)
-                : `Create a comprehensive lesson plan about ${targetLesson?.topicTitle}. ${targetLesson?.fiveMinuteSummary !== 'Content to be generated.' ? targetLesson?.fiveMinuteSummary : ''}`;
+                : `Create a comprehensive lesson plan about: ${targetLesson?.topicTitle}. ${targetLesson?.fiveMinuteSummary !== 'Content to be generated.' ? targetLesson?.fiveMinuteSummary : ''}`;
 
             let response;
             try {
@@ -167,7 +169,7 @@ const ClassDetail: React.FC = () => {
                     body: JSON.stringify({
                         text: textToSend,
                         totalLessons: 1,
-                        context: `Generate content ONLY for Day ${dayNumber}: "${targetLesson?.topicTitle}". ${targetLesson?.fiveMinuteSummary && targetLesson.fiveMinuteSummary !== 'Content to be generated.' ? `Summary to include/expand on: "${targetLesson.fiveMinuteSummary}". ` : ''}Make it detailed and specific to this topic.`,
+                        promptContext: topicContext,
                     }),
                 });
             } catch (networkError) {

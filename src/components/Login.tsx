@@ -79,7 +79,7 @@ const Login: React.FC = () => {
                         <span className="text-blue-300">Inspire Every Day.</span>
                     </h1>
                     <p className="text-blue-100/80 text-base lg:text-lg leading-relaxed max-w-sm mb-6">
-                        AI-powered lesson plans, student tracking, and daily sparks
+                        AI-powered lesson plans, student tracking, and daily sparks.
                     </p>
 
                     {/* Mobile CTA buttons — only visible on small screens */}

@@ -34,15 +34,29 @@ const STORY_SCHEMA = `The output MUST be a single JSON object with this exact st
   "title": "string (A creative and catchy title for the story)",
   "topic": "string (the educational topic covered)",
   "paragraphs": ["string", "string", "string"], // An array of strings. Each string is a paragraph. Generate 4 to 6 paragraphs.
-  "moralOrFact": "string (A key takeaway, fun fact, or moral of the story, 1-2 sentences)"
+  "moralOrFact": "string (A key takeaway, fun fact, or moral of the story, 1-2 sentences)",
+  "questions": [ // Generate exactly 3 multiple-choice comprehension questions testing BOTH story comprehension AND the specific lesson focus. Only include this field if lessonFocus was provided.
+    {
+      "question": "string (The question)",
+      "options": ["string", "string", "string", "string"], // Exactly 4 choices
+      "correctAnswer": "string (The exact correct option)",
+      "explanation": "string (A child-friendly explanation of why this answer is correct, referencing the lesson focus or story)"
+    }
+  ]
 }`;
 
-function buildPrompt(topic: string, studentName: string, ageGroup: string, setting?: string): string {
+function buildPrompt(topic: string, studentName: string, ageGroup: string, setting?: string, lessonFocus?: string): string {
     const settingText = setting ? `The story MUST take place in the setting: "${setting}".` : `You may choose a creative setting suitable for the topic.`;
+    const focusText = lessonFocus 
+        ? `Additionally, you MUST use the story to teach a specific lesson: "${lessonFocus}" (e.g. metaphors, hyperbole, a grammatical rule, or vocabulary).
+           Insert examples of this lesson creatively and naturally into the story paragraphs. Do not oversaturate, but make sure they are clear.
+           Also, you MUST generate the "questions" array in the schema containing exactly 3 comprehension questions testing this lesson concept as taught in the story.`
+        : `Do not include the "questions" field in your JSON output.`;
 
     return `Write an engaging and educational short story about "${topic}" for a reader in/aged "${ageGroup}".
 The main character of the story MUST be named "${studentName}".
 ${settingText}
+${focusText}
 The story should be 4 to 6 paragraphs long, fun, imaginative, and subtly educational without being boring.
 
 ${STORY_SCHEMA}
@@ -59,7 +73,7 @@ const handler: Handler = async (event) => {
     const errors: string[] = [];
 
     try {
-        const { topic, studentName, ageGroup, setting } = JSON.parse(event.body || '{}');
+        const { topic, studentName, ageGroup, setting, lessonFocus } = JSON.parse(event.body || '{}');
 
         if (!topic || !studentName || !ageGroup) {
             return { statusCode: 400, body: JSON.stringify({ error: 'Missing topic, studentName, or ageGroup.' }) };
@@ -70,7 +84,7 @@ const handler: Handler = async (event) => {
         const openaiKey = process.env.OPENAI_API_KEY;
         const mistralKey = process.env.MISTRAL_API_KEY;
 
-        const userPrompt = buildPrompt(topic, studentName, ageGroup, setting);
+        const userPrompt = buildPrompt(topic, studentName, ageGroup, setting, lessonFocus);
         console.log(`[START] Generating story for: ${studentName} about ${topic} (${ageGroup})`);
 
         let aiResponse: any = null;

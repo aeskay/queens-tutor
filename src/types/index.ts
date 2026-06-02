@@ -60,6 +60,13 @@ export interface TriviaGame {
     createdAt: any;
 }
 
+export interface StoryQuestion {
+    question: string;
+    options: string[];
+    correctAnswer: string;
+    explanation: string;
+}
+
 export interface StoryGame {
     id: string;
     userId: string;
@@ -67,9 +74,11 @@ export interface StoryGame {
     studentName: string;
     ageGroup: string;
     setting?: string;
+    lessonFocus?: string; // Optional: specific item or concept to teach
     title: string;
     paragraphs: string[];
     moralOrFact: string;
+    questions?: StoryQuestion[]; // Optional: comprehension questions based on the lesson focus
     createdAt: any;
 }
 

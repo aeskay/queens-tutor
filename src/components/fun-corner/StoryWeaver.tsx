@@ -11,6 +11,7 @@ const StoryWeaver: React.FC = () => {
     const [studentName, setStudentName] = useState('');
     const [ageGroup, setAgeGroup] = useState('');
     const [setting, setSetting] = useState('');
+    const [lessonFocus, setLessonFocus] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [stories, setStories] = useState<StoryGame[]>([]);
     const [readingStory, setReadingStory] = useState<StoryGame | null>(null);
@@ -44,7 +45,7 @@ const StoryWeaver: React.FC = () => {
             const response = await fetch('/.netlify/functions/generate-story', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ topic, studentName, ageGroup, setting })
+                body: JSON.stringify({ topic, studentName, ageGroup, setting, lessonFocus })
             });
 
             if (!response.ok) {
@@ -62,13 +63,16 @@ const StoryWeaver: React.FC = () => {
                 studentName,
                 ageGroup,
                 setting: setting || 'AI Determined',
+                lessonFocus: lessonFocus || null,
                 title: data.title,
                 paragraphs: data.paragraphs,
                 moralOrFact: data.moralOrFact,
+                questions: data.questions || null,
                 createdAt: serverTimestamp()
             });
 
             setTopic('');
+            setLessonFocus('');
         } catch (err: any) {
             console.error('Error generating story:', err);
             setError(err.message || 'An error occurred while generating the story.');
@@ -154,6 +158,16 @@ const StoryWeaver: React.FC = () => {
                                 className="w-full px-4 py-3 bg-white border border-[#ebd7b1]/60 rounded-xl focus:ring-2 focus:ring-[#d4af37]/30 focus:border-[#d4af37] focus:outline-none transition-all text-sm font-medium"
                             />
                         </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-[#8b5a2b]/70 uppercase tracking-wider mb-1.5">Lesson Focus / Concept (Optional)</label>
+                            <input
+                                type="text"
+                                placeholder="e.g. Metaphors, Silent e, Adjectives"
+                                value={lessonFocus}
+                                onChange={e => setLessonFocus(e.target.value)}
+                                className="w-full px-4 py-3 bg-white border border-[#ebd7b1]/60 rounded-xl focus:ring-2 focus:ring-[#d4af37]/30 focus:border-[#d4af37] focus:outline-none transition-all text-sm font-medium"
+                            />
+                        </div>
                         <button
                             onClick={handleGenerate}
                             disabled={!topic.trim() || !studentName.trim() || !ageGroup.trim() || isGenerating}
@@ -209,6 +223,11 @@ const StoryWeaver: React.FC = () => {
                                         <span className="inline-block px-2 py-0.5 bg-[#d4af37]/20 text-[#8b5a2b] text-[10px] font-bold uppercase tracking-wider rounded-md shrink-0">
                                             Star: {story.studentName}
                                         </span>
+                                        {story.lessonFocus && (
+                                            <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold uppercase tracking-wider rounded-md shrink-0">
+                                                Focus: {story.lessonFocus}
+                                            </span>
+                                        )}
                                     </div>
                                     <p className="text-sm text-[#8b5a2b]/70 font-medium truncate">
                                         {story.paragraphs[0]?.substring(0, 80)}...

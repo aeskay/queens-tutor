@@ -53,7 +53,7 @@ const TOPIC_POOLS: Record<string, string[]> = {
         'words ending in -ough (though, through, tough, cough)',
         'silent letters: knife, psychology, gnome, wreck',
         'words most people mispronounce: February, espresso, nuclear, quinoa',
-        'commonly confused homophones: there/their/they're, to/too/two',
+        'commonly confused homophones: there/their/they\'re, to/too/two',
         'stress patterns that change meaning: REcord vs reCORD, PREsent vs preSENT',
         'words borrowed from French that English kept: ballet, café, cliché',
         'letters that sound nothing like their name: W, Y, H'

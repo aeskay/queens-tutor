@@ -13,6 +13,21 @@ interface CreateClassModalProps {
     currentStudentId: string | null;
 }
 
+function getTodayISO() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function formatDateDisplay(iso: string) {
+    if (!iso) return '';
+    const [year, month, day] = iso.split('-');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${months[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
+}
+
 const CreateClassModal: React.FC<CreateClassModalProps> = ({ isOpen, onClose, onSuccess, initialData, students, currentStudentId }) => {
     const { user } = useAuth();
     const isEdit = !!initialData;
@@ -21,6 +36,7 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({ isOpen, onClose, on
     const [teacherName, setTeacherName] = useState(user?.displayName || '');
     const [selectedStudentId, setSelectedStudentId] = useState('');
     const [totalLessons, setTotalLessons] = useState(20);
+    const [classDate, setClassDate] = useState(getTodayISO());
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -31,11 +47,13 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({ isOpen, onClose, on
                 setTeacherName(initialData.teacherName || '');
                 setSelectedStudentId(initialData.studentId || '');
                 setTotalLessons(initialData.totalLessons || 20);
+                setClassDate(initialData.classDate || getTodayISO());
             } else {
                 setClassName('');
                 setTeacherName(user?.displayName || '');
                 setSelectedStudentId(currentStudentId || '');
                 setTotalLessons(20);
+                setClassDate(getTodayISO());
             }
             setError(null);
         }
@@ -59,6 +77,7 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({ isOpen, onClose, on
                     studentId: selectedStudentId,
                     studentName: studentName,
                     totalLessons: Number(totalLessons),
+                    classDate: classDate,
                 });
             } else {
                 await addDoc(collection(db, 'classes'), {
@@ -71,6 +90,7 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({ isOpen, onClose, on
                     completedLessons: 0,
                     status: 'in-progress',
                     totalLessons: Number(totalLessons),
+                    classDate: classDate,
                     createdAt: serverTimestamp(),
                 });
             }
@@ -131,6 +151,26 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({ isOpen, onClose, on
                         {students.length === 0 && (
                             <p className="text-xs text-red-500 mt-1">Please create a student first.</p>
                         )}
+                    </div>
+
+                    {/* Class Date */}
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                            Class Date
+                        </label>
+                        <div className="relative">
+                            <input
+                                type="date"
+                                value={classDate}
+                                onChange={(e) => setClassDate(e.target.value)}
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-400 focus:bg-white focus:outline-none transition-all font-medium text-slate-900 text-sm"
+                            />
+                            {classDate && (
+                                <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-500 pointer-events-none">
+                                    {formatDateDisplay(classDate)}
+                                </span>
+                            )}
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">

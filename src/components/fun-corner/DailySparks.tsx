@@ -6,17 +6,27 @@ import type { DailySpark } from '../../types';
 
 const CATEGORIES = [
     'Pronunciation Challenge',
-    'Mind Benders & Idioms',
-    'Etiquette & Manners',
-    '5-Minute Group Game',
-    'Culture Shock',
-    'Random'
+    'Word of the Day',
+    'Idioms & Phrases',
+    'Grammar Myth Busted',
+    'Spelling Challenge',
+    'Figures of Speech',
+    'Vocabulary Builder',
+    'Punctuation Spotlight',
+    'Word Origins (Etymology)',
+    'Tongue Twister',
+    '5-Minute Word Game',
+    'Random English Fun'
 ];
+
+// Quick country picks — teacher can also type manually
+const QUICK_COUNTRIES = ['Nigeria', 'Ghana', 'Kenya', 'South Africa', 'United Kingdom', 'United States', 'India', 'Australia'];
 
 const DailySparks: React.FC = () => {
     const { user } = useAuth();
     const [category, setCategory] = useState(CATEGORIES[0]);
     const [ageGroup, setAgeGroup] = useState('');
+    const [country, setCountry] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [sparks, setSparks] = useState<DailySpark[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -33,7 +43,6 @@ const DailySparks: React.FC = () => {
             snapshot.forEach((doc) => {
                 data.push({ id: doc.id, ...doc.data() } as DailySpark);
             });
-            // Sort client-side
             data.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
             setSparks(data);
         });
@@ -49,7 +58,7 @@ const DailySparks: React.FC = () => {
             const response = await fetch('/.netlify/functions/generate-spark', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ category, ageGroup })
+                body: JSON.stringify({ category, ageGroup, country: country.trim() })
             });
 
             if (!response.ok) {
@@ -59,12 +68,12 @@ const DailySparks: React.FC = () => {
 
             const data = await response.json();
 
-            // Save to Firestore
             const docRef = doc(collection(db, 'sparks'));
             await setDoc(docRef, {
                 userId: user.uid,
                 category: data.category || category,
                 ageGroup,
+                country: country.trim() || null,
                 title: data.title,
                 theHook: data.theHook,
                 theCoreContent: data.theCoreContent,
@@ -103,6 +112,28 @@ const DailySparks: React.FC = () => {
         }
     };
 
+    // Render bullet-pointed core content
+    const renderCoreContent = (text: string) => {
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        const hasBullets = lines.some(l => l.startsWith('•') || l.startsWith('-') || l.startsWith('*'));
+        if (hasBullets) {
+            return (
+                <ul className="space-y-2">
+                    {lines.map((line, i) => {
+                        const clean = line.replace(/^[•\-\*]\s*/, '');
+                        return (
+                            <li key={i} className="flex items-start gap-2">
+                                <span className="text-blue-400 mt-0.5 text-base leading-none shrink-0">•</span>
+                                <span className="text-slate-600 font-medium leading-snug text-sm">{clean}</span>
+                            </li>
+                        );
+                    })}
+                </ul>
+            );
+        }
+        return <p className="text-slate-600 font-medium leading-relaxed text-sm">{text}</p>;
+    };
+
     return (
         <div className="flex flex-col md:flex-row gap-8 relative h-full min-h-[500px]">
             {/* ── Generator Form ── */}
@@ -118,6 +149,7 @@ const DailySparks: React.FC = () => {
                         </div>
                     )}
                     <div className="space-y-4">
+                        {/* Category */}
                         <div>
                             <label className="block text-xs font-semibold text-amber-900/70 uppercase tracking-wider mb-1.5">Category *</label>
                             <div className="relative">
@@ -135,23 +167,51 @@ const DailySparks: React.FC = () => {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Age Group */}
                         <div>
                             <label className="block text-xs font-semibold text-amber-900/70 uppercase tracking-wider mb-1.5">Age or Grade Level *</label>
                             <input
                                 type="text"
-                                placeholder="e.g. 10 years old, 5th Grade"
+                                placeholder="e.g. 10 years old, 5th Grade, SS2"
                                 value={ageGroup}
                                 onChange={e => setAgeGroup(e.target.value)}
                                 className="w-full px-4 py-3 bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-300 focus:border-amber-400 focus:outline-none transition-all text-sm font-medium"
                             />
                         </div>
+
+                        {/* Country */}
+                        <div>
+                            <label className="block text-xs font-semibold text-amber-900/70 uppercase tracking-wider mb-1.5">
+                                Country <span className="font-normal normal-case text-amber-700/50">(for relevant examples)</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="e.g. Nigeria, Ghana, UK..."
+                                value={country}
+                                onChange={e => setCountry(e.target.value)}
+                                className="w-full px-4 py-3 bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-300 focus:border-amber-400 focus:outline-none transition-all text-sm font-medium mb-2"
+                            />
+                            <div className="flex flex-wrap gap-1.5">
+                                {QUICK_COUNTRIES.map(c => (
+                                    <button
+                                        key={c}
+                                        onClick={() => setCountry(c)}
+                                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all ${country === c ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-amber-800 border-amber-200 hover:border-amber-400'}`}
+                                    >
+                                        {c}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         <button
                             onClick={handleGenerate}
                             disabled={!ageGroup.trim() || isGenerating}
                             className="w-full py-4 rounded-xl bg-amber-500 text-white font-bold text-sm shadow-lg shadow-amber-500/25 hover:bg-amber-600 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-wide"
                         >
                             {isGenerating && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                            {isGenerating ? 'Sparking Idea...' : 'Generate Spark ⚡'}
+                            {isGenerating ? 'Sparking...' : 'Generate Spark ⚡'}
                         </button>
                     </div>
                 </div>
@@ -162,7 +222,7 @@ const DailySparks: React.FC = () => {
                 <div className="flex justify-between items-center mb-6 shrink-0">
                     <div>
                         <h3 className="text-lg font-black text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>Your Classroom Sparks</h3>
-                        <p className="text-sm text-slate-500">{sparks.length} sparks available</p>
+                        <p className="text-sm text-slate-500">{sparks.length} spark{sparks.length !== 1 ? 's' : ''} saved</p>
                     </div>
                     {sparks.length > 0 && (
                         <button
@@ -180,7 +240,7 @@ const DailySparks: React.FC = () => {
                             <span className="text-3xl">💡</span>
                         </div>
                         <p className="font-bold mb-1">No sparks generated yet</p>
-                        <p className="text-sm text-center max-w-[280px]">Select a category and age group to generate a 5-minute engaging classroom activity!</p>
+                        <p className="text-sm text-center max-w-[280px]">Select a category, age group, and country to generate a punchy 5-minute classroom activity!</p>
                     </div>
                 ) : (
                     <div className="flex flex-col gap-6 overflow-y-auto pr-2 pb-4">
@@ -200,13 +260,18 @@ const DailySparks: React.FC = () => {
 
                                 {/* Header Area */}
                                 <div className="bg-amber-500 p-6 sm:px-8 sm:py-6 text-white pr-16">
-                                    <div className="flex items-center gap-2 mb-2 opacity-90">
+                                    <div className="flex items-center flex-wrap gap-2 mb-2 opacity-90">
                                         <span className="text-[10px] font-black uppercase tracking-widest bg-black/20 px-2 py-1 rounded-md">
                                             {spark.category}
                                         </span>
                                         <span className="text-[10px] font-black uppercase tracking-widest bg-black/20 px-2 py-1 rounded-md">
-                                            Age: {spark.ageGroup}
+                                            {spark.ageGroup}
                                         </span>
+                                        {spark.country && (
+                                            <span className="text-[10px] font-black uppercase tracking-widest bg-black/20 px-2 py-1 rounded-md">
+                                                🌍 {spark.country}
+                                            </span>
+                                        )}
                                     </div>
                                     <h4 className="font-black text-2xl sm:text-3xl leading-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
                                         {spark.title}
@@ -228,13 +293,11 @@ const DailySparks: React.FC = () => {
 
                                     {/* The Core Content */}
                                     <div>
-                                        <h5 className="text-xs font-black text-blue-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                        <h5 className="text-xs font-black text-blue-500 uppercase tracking-widest mb-3 flex items-center gap-2">
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                                             The Lesson
                                         </h5>
-                                        <p className="text-slate-600 font-medium leading-relaxed">
-                                            {spark.theCoreContent}
-                                        </p>
+                                        {renderCoreContent(spark.theCoreContent)}
                                     </div>
 
                                     {/* Interactive Element */}
@@ -242,7 +305,7 @@ const DailySparks: React.FC = () => {
                                         <h5 className="text-xs font-black text-emerald-600 uppercase tracking-widest mb-1">
                                             Action! (Do this now)
                                         </h5>
-                                        <p className="text-emerald-900 font-bold">
+                                        <p className="text-emerald-900 font-bold text-sm">
                                             {spark.interactiveElement}
                                         </p>
                                     </div>

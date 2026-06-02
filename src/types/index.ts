@@ -27,6 +27,7 @@ export interface ClassData {
     studentCount: number;
     completedLessons: number;
     totalLessons: number;
+    classDate?: string; // ISO date string YYYY-MM-DD
     lessons?: any[];
     uploadedContents?: UploadedContent[];
     createdAt?: any;
@@ -77,6 +78,7 @@ export interface DailySpark {
     userId: string;
     category: string;
     ageGroup: string;
+    country?: string;
     title: string;
     theHook: string;
     theCoreContent: string;

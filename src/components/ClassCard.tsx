@@ -74,9 +74,21 @@ const ClassCard: React.FC<ClassCardProps> = ({ cls, accent, onEdit, onClone, onD
                 <p className="text-xs text-slate-400 mb-1">
                     Teacher: {cls.teacherName}
                 </p>
-                <p className="text-xs text-slate-400 mb-5 font-medium">
-                    Student: {cls.studentName || 'Unassigned'}
-                </p>
+                <div className="flex items-center gap-2 mb-5 flex-wrap">
+                    <p className="text-xs text-slate-400 font-medium">
+                        Student: {cls.studentName || 'Unassigned'}
+                    </p>
+                    {cls.classDate && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                            {(() => {
+                                const [y, m, d] = cls.classDate.split('-');
+                                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                                return `${months[parseInt(m)-1]} ${parseInt(d)}, ${y}`;
+                            })()}
+                        </span>
+                    )}
+                </div>
 
                 <div className="mt-auto">
                     <div className="flex justify-between items-center mb-2">

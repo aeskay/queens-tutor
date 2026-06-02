@@ -1,11 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-
-const features = [
-    { icon: '🤖', label: 'AI-Powered', desc: 'Generate full lesson plans from your syllabus in seconds' },
-    { icon: '📋', label: 'Structured Plans', desc: 'Summary, deep-dive content, activities and quiz per lesson' },
-    { icon: '✅', label: 'Track Progress', desc: 'Mark lessons complete and monitor your student\'s journey' },
-];
 
 const Login: React.FC = () => {
     const { loginWithGoogle, loginWithEmail, signupWithEmail, resetPassword } = useAuth();
@@ -16,6 +10,14 @@ const Login: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const formRef = useRef<HTMLDivElement>(null);
+
+    const scrollToForm = (targetView: 'login' | 'signup') => {
+        setView(targetView);
+        setTimeout(() => {
+            formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -33,7 +35,6 @@ const Login: React.FC = () => {
                 setMessage('Password reset email sent! Check your inbox.');
             }
         } catch (err: any) {
-            // Clean up Firebase error messages
             const msg = err.message?.replace('Firebase: ', '').replace(/\(auth\/.*?\)\.?/, '').trim();
             setError(msg || 'Something went wrong. Please try again.');
         } finally {
@@ -42,8 +43,8 @@ const Login: React.FC = () => {
     };
 
     const titles = {
-        login: 'Welcome back',
-        signup: 'Create account',
+        login: 'Welcome back 👋',
+        signup: 'Create your account',
         forgot: 'Reset password',
     };
     const subtitles = {
@@ -53,59 +54,82 @@ const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex">
-            {/* ── Left branding panel (desktop only) ── */}
-            <div className="hidden lg:flex lg:w-[52%] bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950 p-14 flex-col justify-between relative overflow-hidden">
-                {/* Background decoration */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    <div className="absolute -top-32 -right-32 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
-                    <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl" />
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-400/5 rounded-full blur-3xl" />
-                </div>
+        <div className="min-h-screen flex flex-col lg:flex-row">
 
-                {/* Logo */}
-                <div className="relative flex items-center gap-3">
-                    <img src="/icon-48x48.png" alt="Queen's Classes" className="w-10 h-10 rounded-xl shrink-0 object-cover shadow-lg" />
-                    <span className="text-white font-black text-xl tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>Queen's Classes</span>
-                </div>
+            {/* ── LEFT PANEL — Her photo hero ── */}
+            <div className="relative lg:w-[52%] flex-shrink-0 overflow-hidden"
+                style={{ minHeight: '420px' }}>
 
-                {/* Hero copy */}
-                <div className="relative">
-                    <h1 className="text-5xl font-black text-white leading-[1.1] mb-6" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                        AI Lesson Plans<br />
-                        <span className="text-blue-400">That Actually Work</span>
+                {/* The photo — covers the entire panel */}
+                <img
+                    src="/app-icon-source.jpg"
+                    alt="Queen's Classes"
+                    className="absolute inset-0 w-full h-full object-cover object-top"
+                />
+
+                {/* Gradient overlay — dark at bottom for text legibility, subtle everywhere else */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/30 to-blue-950/20" />
+                {/* Subtle left-side vignette for desktop blending */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent to-blue-950/10 hidden lg:block" />
+
+                {/* Bottom branding text */}
+                <div className="absolute bottom-0 left-0 right-0 z-10 p-8 lg:p-12">
+                    <h1 className="text-4xl lg:text-5xl font-black text-white leading-[1.1] mb-3 drop-shadow-lg" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                        Teach with Purpose.<br />
+                        <span className="text-blue-300">Inspire Every Day.</span>
                     </h1>
-                    <p className="text-blue-200/80 text-lg leading-relaxed mb-12 max-w-md">
-                        Upload your syllabus PDF and let AI build a complete, structured lesson plan — with summaries, deep-dives, activities and quizzes.
+                    <p className="text-blue-100/80 text-base lg:text-lg leading-relaxed max-w-sm mb-6">
+                        AI-powered lesson plans, student tracking, and daily sparks
                     </p>
 
-                    <div className="space-y-4">
-                        {features.map((f) => (
-                            <div key={f.label} className="flex items-start gap-4 p-4 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm">
-                                <span className="text-2xl">{f.icon}</span>
-                                <div>
-                                    <p className="text-white font-bold text-sm">{f.label}</p>
-                                    <p className="text-blue-200/70 text-sm">{f.desc}</p>
-                                </div>
-                            </div>
-                        ))}
+                    {/* Mobile CTA buttons — only visible on small screens */}
+                    <div className="flex gap-3 lg:hidden">
+                        <button
+                            onClick={() => scrollToForm('login')}
+                            className="flex-1 py-3 rounded-xl bg-white text-slate-900 font-bold text-sm shadow-lg hover:bg-blue-50 transition-all active:scale-95"
+                        >
+                            Sign In
+                        </button>
+                        <button
+                            onClick={() => scrollToForm('signup')}
+                            className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-500/30 hover:bg-blue-600 transition-all active:scale-95"
+                        >
+                            Create Account
+                        </button>
                     </div>
-                </div>
 
-                <p className="relative text-blue-300/40 text-xs font-medium">
-                    Powered by Groq · Gemini · GPT-4o
-                </p>
+                    {/* Desktop footer credit */}
+                    <p className="hidden lg:block text-blue-300/40 text-xs font-medium mt-6">
+                        Queen Osewime
+                    </p>
+                </div>
             </div>
 
-            {/* ── Right form panel ── */}
-            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-white min-h-screen lg:min-h-0">
-                {/* Mobile logo */}
-                <div className="lg:hidden flex items-center gap-3 mb-10">
-                    <img src="/icon-48x48.png" alt="Queen's Classes" className="w-9 h-9 rounded-xl shrink-0 object-cover" />
-                    <span className="text-slate-900 font-black text-xl tracking-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>Queen's Classes</span>
-                </div>
-
+            {/* ── RIGHT PANEL — Form ── */}
+            <div
+                ref={formRef}
+                className="flex-1 flex flex-col items-center justify-center p-6 lg:p-12 bg-white min-h-screen lg:min-h-0 scroll-mt-0"
+            >
                 <div className="w-full max-w-md">
+
+                    {/* View switcher tabs — desktop */}
+                    {view !== 'forgot' && (
+                        <div className="hidden lg:flex gap-1 bg-slate-100 p-1 rounded-xl mb-8">
+                            <button
+                                onClick={() => { setView('login'); setError(null); }}
+                                className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${view === 'login' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                Sign In
+                            </button>
+                            <button
+                                onClick={() => { setView('signup'); setError(null); }}
+                                className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${view === 'signup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                Create Account
+                            </button>
+                        </div>
+                    )}
+
                     <div className="mb-8">
                         <h2 className="text-3xl font-black text-slate-900 mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
                             {titles[view]}
@@ -224,7 +248,8 @@ const Login: React.FC = () => {
                         </>
                     )}
 
-                    <p className="mt-8 text-center text-sm text-slate-500">
+                    {/* Mobile: switch between login/signup */}
+                    <p className="mt-8 text-center text-sm text-slate-500 lg:hidden">
                         {view === 'login' ? "Don't have an account? " : view === 'signup' ? 'Already have an account? ' : ''}
                         {view !== 'forgot' && (
                             <button
@@ -235,6 +260,8 @@ const Login: React.FC = () => {
                             </button>
                         )}
                     </p>
+
+
                 </div>
             </div>
         </div>

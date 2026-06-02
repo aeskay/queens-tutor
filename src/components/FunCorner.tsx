@@ -5,11 +5,12 @@ import SuggestTopic from './fun-corner/SuggestTopic';
 import TriviaGenerator from './fun-corner/TriviaGenerator';
 import StoryWeaver from './fun-corner/StoryWeaver';
 import DailySparks from './fun-corner/DailySparks';
+import SuggestTextbook from './fun-corner/SuggestTextbook';
 
 const FunCorner: React.FC = () => {
     const { logout } = useAuth();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<'suggest-topic' | 'trivia' | 'story' | 'sparks'>('suggest-topic');
+    const [activeTab, setActiveTab] = useState<'suggest-topic' | 'trivia' | 'story' | 'sparks' | 'textbooks'>('suggest-topic');
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -19,21 +20,27 @@ const FunCorner: React.FC = () => {
                     <div className="flex items-center gap-3 w-1/2 md:w-auto">
                         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
                             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.5L15 9l4.5-1.5L18 15H6l-1.5-7.5L9 9l3-4.5zM6 15v2.5a1.5 1.5 0 001.5 1.5h9a1.5 1.5 0 001.5-1.5V15" />
                             </svg>
                         </div>
-                        <span className="font-black text-slate-900 text-lg truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>Fun Corner</span>
+                        <span className="font-black text-slate-900 text-lg truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>Queen's Corner</span>
                     </div>
 
                     <div className="flex gap-1 sm:gap-4 order-3 md:order-none w-full md:w-auto justify-center md:absolute md:left-1/2 md:-translate-x-1/2">
-                        <button 
+                        <button
                             onClick={() => navigate('/')}
-                            className="px-4 py-2 rounded-full text-sm font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all"
+                            className="px-4 py-2 rounded-full text-sm font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2"
                         >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            </svg>
                             My Classes
                         </button>
                         <div className="px-4 py-2 bg-slate-100 rounded-full text-sm font-bold text-slate-900 flex items-center gap-2">
-                            Fun Corner 🎈
+                            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.5L15 9l4.5-1.5L18 15H6l-1.5-7.5L9 9l3-4.5zM6 15v2.5a1.5 1.5 0 001.5 1.5h9a1.5 1.5 0 001.5-1.5V15" />
+                            </svg>
+                            Queen's Corner
                         </div>
                     </div>
 
@@ -54,43 +61,48 @@ const FunCorner: React.FC = () => {
                 <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
                     <button
                         onClick={() => setActiveTab('suggest-topic')}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                            activeTab === 'suggest-topic'
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
-                                : 'bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
-                        }`}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'suggest-topic'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
+                            : 'bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
+                            }`}
                     >
                         💡 Suggest Topic
                     </button>
                     <button
                         onClick={() => setActiveTab('trivia')}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                            activeTab === 'trivia'
-                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25'
-                                : 'bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
-                        }`}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'trivia'
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25'
+                            : 'bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
+                            }`}
                     >
                         🎯 Trivia Generator
                     </button>
                     <button
                         onClick={() => setActiveTab('story')}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                            activeTab === 'story'
-                                ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/25'
-                                : 'bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
-                        }`}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'story'
+                            ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/25'
+                            : 'bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
+                            }`}
                     >
                         📖 Story Weaver
                     </button>
                     <button
                         onClick={() => setActiveTab('sparks')}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                            activeTab === 'sparks'
-                                ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/25'
-                                : 'bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
-                        }`}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'sparks'
+                            ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/25'
+                            : 'bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
+                            }`}
                     >
                         ⚡ Daily Sparks
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('textbooks')}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'textbooks'
+                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/25'
+                                : 'bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
+                            }`}
+                    >
+                        📚 Textbooks
                     </button>
                 </div>
 
@@ -100,6 +112,7 @@ const FunCorner: React.FC = () => {
                     {activeTab === 'trivia' && <TriviaGenerator />}
                     {activeTab === 'story' && <StoryWeaver />}
                     {activeTab === 'sparks' && <DailySparks />}
+                    {activeTab === 'textbooks' && <SuggestTextbook />}
                 </div>
             </main>
         </div>

@@ -103,10 +103,20 @@ const ClassDetail: React.FC = () => {
                     }),
                 });
             } catch (networkError) {
-                throw new Error('Network error: Could not reach the server. Please ensure that you have run "npm start" and that the Netlify dev server is running.');
+                throw new Error('Network error: Could not reach the server. Please run "netlify dev" instead of "npm run dev" to use AI features.');
             }
 
-            const data = await response.json();
+            const rawText = await response.text();
+            let data: any;
+            try {
+                data = JSON.parse(rawText);
+            } catch {
+                throw new Error(
+                    response.status === 404
+                        ? 'AI function not found. Please run "netlify dev" instead of "npm run dev" to use AI features.'
+                        : `Server returned unexpected response (${response.status}). Please try again.`
+                );
+            }
 
             if (!response.ok) {
                 throw new Error(
@@ -177,10 +187,20 @@ const ClassDetail: React.FC = () => {
                     }),
                 });
             } catch (networkError) {
-                throw new Error('Network error: Could not reach the server. Please ensure that you have run "npm start" and that the Netlify dev server is running.');
+                throw new Error('Network error: Could not reach the server. Please run "netlify dev" instead of "npm run dev" to use AI features.');
             }
 
-            const data = await response.json();
+            const rawText = await response.text();
+            let data: any;
+            try {
+                data = JSON.parse(rawText);
+            } catch {
+                throw new Error(
+                    response.status === 404
+                        ? 'AI function not found. Please run "netlify dev" instead of "npm run dev" to use AI features.'
+                        : `Server returned unexpected response (${response.status}). Please try again.`
+                );
+            }
 
             if (!response.ok) {
                 throw new Error(data.error || 'Regeneration failed. Please try again.');

@@ -155,6 +155,15 @@ const TOPIC_POOLS: Record<string, string[]> = {
         'words that Shakespeare invented that we still use today',
         'the history of the letter W — why it is called "double U"',
         'why English spelling is so chaotic — the Great Vowel Shift explained simply'
+    ],
+    "Don't Say This, Say This": [
+        '5 common errors involving direct translations from local languages to English',
+        '5 common errors with verbs and actions (e.g., using "off/on" instead of "turn off/turn on")',
+        '5 common errors involving prepositions (e.g., "congratulations for" instead of "congratulations on")',
+        '5 common vocabulary mix-ups (e.g., "borrow" instead of "lend")',
+        '5 common redundant phrases people say (e.g., "return back", "repeat again")',
+        '5 common misuses of idioms or polite phrases (e.g., "more grease to your elbow")',
+        '5 general everyday phrases people say wrong and their correct alternatives'
     ]
 };
 
@@ -174,13 +183,29 @@ function buildPrompt(category: string, ageGroup: string, country: string, seed: 
         ? `The students are from ${country}. Use examples, words, and references that are relevant and familiar to people from ${country}. Do NOT use examples that are irrelevant or unknown there.`
         : 'Use universally relatable examples.';
 
+    const isDontSay = effectiveCategory === "Don't Say This, Say This";
+
+    const categoryInstructions = isDontSay
+        ? `SPECIAL INSTRUCTIONS FOR THIS CATEGORY:
+This spark is about common English mistakes people make — especially in everyday Nigerian/African speech — and the correct alternatives.
+
+- The title MUST follow this format: e.g. "5 Things You're Saying Wrong (And What to Say Instead)"
+- theHook: Start with a relatable, punchy observation about how even fluent English speakers say certain things wrong every day.
+- theCoreContent: Give EXACTLY 5 examples. Format EACH bullet point exactly like this:
+  • ❌ Don't say: "[wrong phrase]" → ✅ Say: "[correct phrase]" — [one-sentence explanation of why]
+- interactiveElement: Ask students to recall one phrase they (or family members) say wrong and share it with the class.
+- funFact: Share a brief, interesting fact about why these errors happen (e.g. influence of local languages, direct translation habits).
+
+The topic gives you a THEME to find examples from — do NOT just use the theme words verbatim. Generate 5 real, specific, everyday examples that fit the theme.`
+        : `IMPORTANT: Cover the topic COMPLETELY. If you mention a number (e.g., "3 words"), list ALL of them in bullet points.`;
+
     return `Create a 5-minute classroom "Spark" for students aged/in: "${ageGroup}".
 Category: "${effectiveCategory}"
 Specific topic to cover: "${topic}"
 
 ${countryContext}
 
-IMPORTANT: Cover the topic COMPLETELY. If you mention a number (e.g., "3 words"), list ALL of them in bullet points.
+${categoryInstructions}
 
 ${SPARK_SCHEMA}
 

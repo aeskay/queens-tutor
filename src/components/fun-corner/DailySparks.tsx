@@ -16,7 +16,8 @@ const CATEGORIES = [
     'Word Origins (Etymology)',
     'Tongue Twister',
     '5-Minute Word Game',
-    'Random English Fun'
+    'Random English Fun',
+    "Don't Say This, Say This"
 ];
 
 // Quick country picks — teacher can also type manually

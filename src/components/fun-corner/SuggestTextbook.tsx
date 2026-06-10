@@ -69,7 +69,7 @@ const SuggestTextbook: React.FC = () => {
     const [countrySearch, setCountrySearch] = useState('');
     const [showCountryDropdown, setShowCountryDropdown] = useState(false);
     const [grade, setGrade] = useState('');
-    const [subject, setSubject] = useState('');
+    const [subject, setSubject] = useState('English Language');
     const [extraInfo, setExtraInfo] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -284,7 +284,6 @@ const SuggestTextbook: React.FC = () => {
                                     onChange={e => setSubject(e.target.value)}
                                     className="w-full px-4 py-3 bg-white border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-300 focus:border-blue-400 focus:outline-none transition-all text-sm font-semibold text-slate-700 appearance-none cursor-pointer"
                                 >
-                                    <option value="" disabled>Select a subject...</option>
                                     {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
                                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-blue-500">

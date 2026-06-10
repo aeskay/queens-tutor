@@ -62,17 +62,22 @@ const SCHEMA = `Return a JSON array of exactly 5 objects:
 ]`;
 
 function buildPrompt(country: string, grade: string, subject: string, extraInfo: string, gradeLingo: string): string {
-    const extra = extraInfo.trim() ? `\nAdditional context: ${extraInfo.trim()}` : '';
+    const hasExtra = extraInfo.trim().length > 0;
+    const extraConstraint = hasExtra
+        ? `\n- Specific requirement (MANDATORY — every book MUST address this): "${extraInfo.trim()}"\n  This is not optional background. If the user says "WAEC exam prep", only suggest books explicitly used for WAEC. If they say "focusing on grammar", only books strong on grammar. If they say "beginner level", only introductory books. Tailor ALL 5 recommendations to this constraint.`
+        : '';
+
     return `Suggest 5 real, freely available textbooks for this student:
 - Country: ${country} (use this to understand the grade system only — e.g. "${gradeLingo} ${grade}" in ${country})
 - ${gradeLingo}: ${grade}
-- Subject: ${subject}${extra}
+- Subject: ${subject}${extraConstraint}
 
 IMPORTANT:
 1. Recommend internationally recognized textbooks (Cambridge, Oxford, OpenStax, CK-12, etc.) that are genuinely findable as free PDFs online.
 2. Do NOT recommend obscure local books that only exist in print in ${country} — they won't be findable online.
 3. Think: what globally respected book covers this subject at this grade level? (e.g. a Nigerian SS2 student studying Physics is roughly equivalent to a 16-year-old — recommend Cambridge IGCSE Physics, OpenStax Physics, etc.)
 4. Every book you recommend MUST actually exist. Do not hallucinate titles.
+${hasExtra ? '5. CRITICAL: All 5 books MUST directly address the specific requirement stated above. Generic textbooks that do not match that requirement are NOT acceptable.' : ''}
 
 ${SCHEMA}
 

@@ -58,7 +58,7 @@ const Login: React.FC = () => {
 
             {/* ── LEFT PANEL — Her photo hero ── */}
             <div className="relative lg:w-[52%] flex-shrink-0 overflow-hidden"
-                style={{ minHeight: '420px' }}>
+                style={{ minHeight: 'clamp(480px, 75vh, 640px)' }}>
 
                 {/* The photo — covers the entire panel */}
                 <img
@@ -108,7 +108,7 @@ const Login: React.FC = () => {
             {/* ── RIGHT PANEL — Form ── */}
             <div
                 ref={formRef}
-                className="flex-1 flex flex-col items-center justify-center p-6 lg:p-12 bg-white min-h-screen lg:min-h-0 scroll-mt-0"
+                className="flex-1 flex flex-col items-center justify-center p-6 lg:p-12 bg-white lg:min-h-screen scroll-mt-0"
             >
                 <div className="w-full max-w-md">
 

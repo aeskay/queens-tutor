@@ -393,7 +393,14 @@ const SuggestTextbook: React.FC = () => {
                                     {/* Action buttons */}
                                     <div className="flex flex-col gap-2 mt-auto">
                                         <button
-                                            onClick={() => handleGoogleSearch(book.pdfSearchQuery || `${book.title} ${book.authors} filetype:pdf`)}
+                                            onClick={() => {
+                                                // Strip any site: operator the AI may have added — Archive.org has its own button
+                                                const baseQuery = (book.pdfSearchQuery || `${book.title} ${book.authors}`)
+                                                    .replace(/\bsite:\S+/gi, '')
+                                                    .replace(/\bfiletype:\S+/gi, '')
+                                                    .trim();
+                                                handleGoogleSearch(`${baseQuery} filetype:pdf`);
+                                            }}
                                             className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-700 transition-all active:scale-95"
                                         >
                                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>

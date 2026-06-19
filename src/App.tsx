@@ -6,6 +6,7 @@ import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import ClassDetail from './components/ClassDetail';
 import FunCorner from './components/FunCorner';
+import SammySays from './components/SammySays';
 
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
@@ -38,6 +39,7 @@ const AppContent: React.FC = () => {
           element={user ? <FunCorner /> : <Navigate to="/login" />}
         />
       </Routes>
+      <SammySays />
     </Router>
   );
 };

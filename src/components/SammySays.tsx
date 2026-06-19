@@ -97,17 +97,17 @@ const SammySays: React.FC = () => {
             {/* The Tab Icon (Draggable vertically along the right edge) */}
             <div 
                 className="absolute right-0 pointer-events-auto flex items-center"
-                style={{ top: \`\${dragY}px\`, transform: 'translateY(-50%)' }}
+                style={{ top: `${dragY}px`, transform: 'translateY(-50%)' }}
             >
                 <div 
                     onTouchMove={handleTouchMove}
                     onClick={() => setIsOpen(!isOpen)}
-                    className={\`
+                    className={`
                         bg-white/80 backdrop-blur-sm border border-r-0 border-rose-200 
                         rounded-l-xl p-2 shadow-sm cursor-pointer flex items-center justify-center
                         transition-all duration-300 
-                        \${isOpen ? 'translate-x-full opacity-0' : 'translate-x-0 opacity-100 hover:bg-white'}
-                    \`}
+                        ${isOpen ? 'translate-x-full opacity-0' : 'translate-x-0 opacity-100 hover:bg-white'}
+                    `}
                     style={{ touchAction: 'none' }} // Prevent scrolling while dragging
                 >
                     <div className="flex flex-col items-center gap-1 opacity-40 hover:opacity-100 transition-opacity">
@@ -129,11 +129,11 @@ const SammySays: React.FC = () => {
 
             {/* The Message Bubble (Slides in from right) */}
             <div 
-                className={\`
+                className={`
                     absolute right-4 pointer-events-auto transition-transform duration-500 ease-out
-                    \${isOpen ? 'translate-x-0 opacity-100' : 'translate-x-[120%] opacity-0'}
-                \`}
-                style={{ top: \`\${Math.min(Math.max(dragY - 100, 20), typeof window !== 'undefined' ? window.innerHeight - 250 : 0)}px\` }}
+                    ${isOpen ? 'translate-x-0 opacity-100' : 'translate-x-[120%] opacity-0'}
+                `}
+                style={{ top: `${Math.min(Math.max(dragY - 100, 20), typeof window !== 'undefined' ? window.innerHeight - 250 : 0)}px` }}
             >
                 <div className="bg-white/95 backdrop-blur-md border border-rose-100 shadow-2xl shadow-rose-200/50 rounded-2xl p-6 w-[280px] sm:w-[320px] relative overflow-hidden flex flex-col">
                     {/* Decorative elements */}

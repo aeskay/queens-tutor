@@ -110,7 +110,7 @@ const SammySays: React.FC = () => {
                     `}
                     style={{ touchAction: 'none' }} // Prevent scrolling while dragging
                 >
-                    <div className="flex flex-col items-center gap-1 opacity-40 hover:opacity-100 transition-opacity">
+                    <div className="flex flex-col items-center gap-1">
                         {/* Drag handle dots */}
                         <div className="flex gap-0.5">
                             <div className="w-1 h-1 rounded-full bg-rose-300" />

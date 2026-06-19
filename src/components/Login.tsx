@@ -161,7 +161,7 @@ const Login: React.FC = () => {
                                 <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Full Name</label>
                                 <input
                                     type="text"
-                                    placeholder="e.g. Samuel Alalade"
+                                    placeholder="e.g. Queen Ahonsi"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     className="w-full px-4 py-3.5 rounded-xl bg-slate-50 border border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 focus:bg-white focus:outline-none transition-all text-slate-900 font-medium placeholder:text-slate-400"

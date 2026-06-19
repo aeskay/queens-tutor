@@ -106,14 +106,9 @@ const SammySays: React.FC = () => {
             {/* The Floating Icon */}
             <button 
                 onClick={() => setIsOpen(!isOpen)}
-                className={`relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-tr from-rose-500 to-pink-500 text-white shadow-lg shadow-rose-500/40 hover:shadow-xl hover:shadow-rose-500/50 hover:-translate-y-1 transition-all duration-300 ${!isOpen ? 'animate-bounce' : ''}`}
-                style={{ animationDuration: '2s' }}
+                className={`relative flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-tr from-rose-500 to-pink-500 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ${!isOpen ? 'opacity-70 hover:opacity-100' : 'opacity-100'}`}
             >
-                {/* Ping animation behind the button to draw attention if not open */}
-                {!isOpen && (
-                    <span className="absolute inset-0 rounded-full border-2 border-rose-400 animate-ping opacity-75"></span>
-                )}
-                <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                 </svg>
             </button>

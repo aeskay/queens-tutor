@@ -10,7 +10,7 @@ import SuggestTextbook from './fun-corner/SuggestTextbook';
 const FunCorner: React.FC = () => {
     const { logout } = useAuth();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<'suggest-topic' | 'trivia' | 'story' | 'sparks' | 'textbooks'>('suggest-topic');
+    const [activeTab, setActiveTab] = useState<'suggest-topic' | 'trivia' | 'story' | 'sparks' | 'textbooks'>('textbooks');
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -60,6 +60,24 @@ const FunCorner: React.FC = () => {
                 {/* ── Tabs ── */}
                 <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
                     <button
+                        onClick={() => setActiveTab('textbooks')}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'textbooks'
+                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/25'
+                                : 'bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
+                            }`}
+                    >
+                        📚 Textbooks
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('sparks')}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'sparks'
+                            ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/25'
+                            : 'bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
+                            }`}
+                    >
+                        ⚡ Daily Sparks
+                    </button>
+                    <button
                         onClick={() => setActiveTab('suggest-topic')}
                         className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'suggest-topic'
                             ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
@@ -85,24 +103,6 @@ const FunCorner: React.FC = () => {
                             }`}
                     >
                         📖 Story Weaver
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('sparks')}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'sparks'
-                            ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/25'
-                            : 'bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
-                            }`}
-                    >
-                        ⚡ Daily Sparks
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('textbooks')}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'textbooks'
-                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/25'
-                                : 'bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
-                            }`}
-                    >
-                        📚 Textbooks
                     </button>
                 </div>
 

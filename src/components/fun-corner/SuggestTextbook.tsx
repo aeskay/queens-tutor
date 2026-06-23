@@ -76,6 +76,8 @@ const SuggestTextbook: React.FC = () => {
     const [textbooks, setTextbooks] = useState<Textbook[]>([]);
     const [gradeLingo, setGradeLingo] = useState('Grade');
     const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+    const [moreContext, setMoreContext] = useState('');
+    const [isFetchingMore, setIsFetchingMore] = useState(false);
 
     const filteredCountries = COUNTRIES.filter(c =>
         c.name.toLowerCase().includes(countrySearch.toLowerCase())
@@ -139,6 +141,38 @@ const SuggestTextbook: React.FC = () => {
         setStep(1);
         setTextbooks([]);
         setError(null);
+        setMoreContext('');
+    };
+
+    const handleFetchMore = async () => {
+        if (!moreContext.trim()) return;
+        setIsFetchingMore(true);
+        setError(null);
+
+        try {
+            const existingTitles = textbooks.map(b => b.title);
+            // We append the new context to whatever the user originally searched for
+            const updatedExtraInfo = extraInfo ? `${extraInfo}. Additional context: ${moreContext}` : moreContext;
+            
+            const response = await fetch('/.netlify/functions/suggest-textbook', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ country, grade: grade.trim(), subject, extraInfo: updatedExtraInfo, existingTitles })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'Failed to find more textbooks. Please try again.');
+            }
+
+            const data = await response.json();
+            setTextbooks(prev => [...prev, ...(data.textbooks || [])]);
+            setMoreContext(''); // Clear input after success
+        } catch (err: any) {
+            setError(err.message || 'An error occurred fetching more books.');
+        } finally {
+            setIsFetchingMore(false);
+        }
     };
 
     return (
@@ -435,12 +469,35 @@ const SuggestTextbook: React.FC = () => {
                         ))}
                     </div>
 
-                    {/* Disclaimer */}
-                    <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
-                        <p className="text-xs text-amber-800 font-medium">
-                            <strong>⚠️ Heads up:</strong> These are AI-suggested textbooks based on common curriculum knowledge.
-                            The "Search Free PDF" button opens a targeted Google search — always verify you're downloading from a legitimate source like archive.org, government education portals, or official publisher pages.
-                        </p>
+                    <div className="mt-8 bg-blue-50/50 border border-blue-100 rounded-2xl p-5 shadow-sm">
+                        <h4 className="font-bold text-slate-800 mb-2">Not finding the right books?</h4>
+                        <p className="text-xs text-slate-500 mb-4">Give more context (e.g. "needs to focus on algebra", "for a beginner") and we'll fetch more targeted suggestions.</p>
+                        <div className="flex gap-3">
+                            <input
+                                type="text"
+                                placeholder="Give more context..."
+                                value={moreContext}
+                                onChange={e => setMoreContext(e.target.value)}
+                                className="flex-1 px-4 py-3 bg-white border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-300 focus:border-blue-400 focus:outline-none transition-all text-sm font-medium"
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') handleFetchMore();
+                                }}
+                            />
+                            <button
+                                onClick={handleFetchMore}
+                                disabled={!moreContext.trim() || isFetchingMore}
+                                className="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-md hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[140px]"
+                            >
+                                {isFetchingMore ? (
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    'Fetch More'
+                                )}
+                            </button>
+                        </div>
+                        {error && (
+                            <p className="text-red-500 text-xs mt-3">{error}</p>
+                        )}
                     </div>
                 </div>
             )}

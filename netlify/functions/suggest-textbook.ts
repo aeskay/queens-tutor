@@ -61,16 +61,20 @@ const SCHEMA = `Return a JSON array of exactly 5 objects:
   }
 ]`;
 
-function buildPrompt(country: string, grade: string, subject: string, extraInfo: string, gradeLingo: string): string {
+function buildPrompt(country: string, grade: string, subject: string, extraInfo: string, gradeLingo: string, existingTitles?: string[]): string {
     const hasExtra = extraInfo.trim().length > 0;
     const extraConstraint = hasExtra
-        ? `\n- Specific requirement (MANDATORY — every book MUST address this): "${extraInfo.trim()}"\n  This is not optional background. If the user says "WAEC exam prep", only suggest books explicitly used for WAEC. If they say "focusing on grammar", only books strong on grammar. If they say "beginner level", only introductory books. Tailor ALL 5 recommendations to this constraint.`
+        ? `\n- Specific requirement (MANDATORY — every book MUST address this): "${extraInfo.trim()}"\n  This is not optional background. Tailor ALL 5 recommendations to this constraint.`
+        : '';
+        
+    const exclusionConstraint = existingTitles && existingTitles.length > 0
+        ? `\n- DO NOT RECOMMEND any of the following books (the student already has them in their list):\n${existingTitles.map(t => `  * "${t}"`).join('\n')}`
         : '';
 
     return `Suggest 5 real, freely available textbooks for this student:
 - Country: ${country} (use this to understand the grade system only — e.g. "${gradeLingo} ${grade}" in ${country})
 - ${gradeLingo}: ${grade}
-- Subject: ${subject}${extraConstraint}
+- Subject: ${subject}${extraConstraint}${exclusionConstraint}
 
 IMPORTANT:
 1. Recommend internationally recognized textbooks (Cambridge, Oxford, OpenStax, CK-12, etc.) that are genuinely findable as free PDFs online.
@@ -93,7 +97,7 @@ const handler: Handler = async (event) => {
     const errors: string[] = [];
 
     try {
-        const { country, grade, subject, extraInfo } = JSON.parse(event.body || '{}');
+        const { country, grade, subject, extraInfo, existingTitles } = JSON.parse(event.body || '{}');
 
         if (!country || !grade || !subject) {
             return { statusCode: 400, body: JSON.stringify({ error: 'Missing country, grade, or subject.' }) };
@@ -105,7 +109,7 @@ const handler: Handler = async (event) => {
         const openaiKey = process.env.OPENAI_API_KEY;
         const mistralKey = process.env.MISTRAL_API_KEY;
 
-        const userPrompt = buildPrompt(country, grade, subject, extraInfo || '', gradeLingo);
+        const userPrompt = buildPrompt(country, grade, subject, extraInfo || '', gradeLingo, existingTitles);
         console.log(`[START] Generating textbook suggestions: ${country} / ${gradeLingo} ${grade} / ${subject}`);
 
         let aiResponse: any[] | null = null;

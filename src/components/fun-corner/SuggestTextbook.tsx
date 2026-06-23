@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import SaveBookModal from './SaveBookModal';
+import SavedBooks from './SavedBooks';
 
 // ─── Country list (name + flag emoji) ────────────────────────────────────────
 const COUNTRIES = [
@@ -78,6 +80,8 @@ const SuggestTextbook: React.FC = () => {
     const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
     const [moreContext, setMoreContext] = useState('');
     const [isFetchingMore, setIsFetchingMore] = useState(false);
+    const [viewMode, setViewMode] = useState<'search' | 'saved'>('search');
+    const [bookToSave, setBookToSave] = useState<Textbook | null>(null);
 
     const filteredCountries = COUNTRIES.filter(c =>
         c.name.toLowerCase().includes(countrySearch.toLowerCase())
@@ -177,42 +181,66 @@ const SuggestTextbook: React.FC = () => {
 
     return (
         <div className="flex flex-col gap-6">
-            {/* ── Header ── */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
+            {/* ── Header & View Toggle ── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-xl font-black text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                        📚 Find Free Textbooks
+                        📚 {viewMode === 'search' ? 'Find Free Textbooks' : 'My Saved Books'}
                     </h2>
                     <p className="text-sm text-slate-500 mt-0.5">
-                        Tell us where your student is, and we'll find curriculum-matched free PDFs.
+                        {viewMode === 'search' 
+                            ? "Tell us where your student is, and we'll find curriculum-matched free PDFs."
+                            : "Your personal library of curriculum-matched textbooks."
+                        }
                     </p>
                 </div>
-                {step === 3 && (
-                    <button
-                        onClick={handleReset}
-                        className="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
+                
+                <div className="flex bg-slate-100 p-1 rounded-xl shrink-0">
+                    <button 
+                        onClick={() => setViewMode('search')}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'search' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
-                        ← New Search
+                        🔍 Find Textbooks
                     </button>
-                )}
+                    <button 
+                        onClick={() => setViewMode('saved')}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-1 ${viewMode === 'saved' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        💾 My Saved Books
+                    </button>
+                </div>
             </div>
 
-            {/* ── Step Indicator ── */}
-            <div className="flex items-center gap-2">
-                {[1, 2, 3].map(s => (
-                    <React.Fragment key={s}>
-                        <div className={`flex items-center gap-2 transition-all`}>
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all ${step >= s ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-slate-100 text-slate-400'}`}>
-                                {step > s ? '✓' : s}
-                            </div>
-                            <span className={`text-xs font-bold hidden sm:block ${step >= s ? 'text-slate-700' : 'text-slate-400'}`}>
-                                {s === 1 ? 'Country' : s === 2 ? 'Details' : 'Results'}
-                            </span>
+            {viewMode === 'saved' ? (
+                <SavedBooks />
+            ) : (
+                <>
+                    <div className="flex items-center justify-between">
+                        {/* ── Step Indicator ── */}
+                        <div className="flex items-center gap-2">
+                            {[1, 2, 3].map(s => (
+                                <React.Fragment key={s}>
+                                    <div className={`flex items-center gap-2 transition-all`}>
+                                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all ${step >= s ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-slate-100 text-slate-400'}`}>
+                                            {step > s ? '✓' : s}
+                                        </div>
+                                        <span className={`text-xs font-bold hidden sm:block ${step >= s ? 'text-slate-700' : 'text-slate-400'}`}>
+                                            {s === 1 ? 'Country' : s === 2 ? 'Details' : 'Results'}
+                                        </span>
+                                    </div>
+                                    {s < 3 && <div className={`flex-1 h-0.5 rounded-full transition-all ${step > s ? 'bg-emerald-400' : 'bg-slate-100'}`} />}
+                                </React.Fragment>
+                            ))}
                         </div>
-                        {s < 3 && <div className={`flex-1 h-0.5 rounded-full transition-all ${step > s ? 'bg-emerald-400' : 'bg-slate-100'}`} />}
-                    </React.Fragment>
-                ))}
-            </div>
+                        {step === 3 && (
+                            <button
+                                onClick={handleReset}
+                                className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
+                            >
+                                ← New Search
+                            </button>
+                        )}
+                    </div>
 
             {/* ── Step 1: Country ── */}
             {step === 1 && (
@@ -402,9 +430,18 @@ const SuggestTextbook: React.FC = () => {
                                         {idx + 1}
                                     </div>
 
-                                    <h3 className="font-black text-slate-900 leading-tight mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                                        {book.title}
-                                    </h3>
+                                    <div className="flex items-start justify-between mb-1 gap-2">
+                                        <h3 className="font-black text-slate-900 leading-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                                            {book.title}
+                                        </h3>
+                                        <button 
+                                            onClick={() => setBookToSave(book)}
+                                            className="shrink-0 w-8 h-8 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 flex items-center justify-center transition-colors"
+                                            title="Save Book"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                                        </button>
+                                    </div>
                                     <p className="text-xs text-slate-400 font-semibold mb-1">{book.authors}</p>
                                     {book.edition && book.edition !== 'N/A' && (
                                         <span className="inline-block text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md mb-3">
@@ -500,6 +537,15 @@ const SuggestTextbook: React.FC = () => {
                         )}
                     </div>
                 </div>
+            )}
+            </>
+            )}
+
+            {bookToSave && (
+                <SaveBookModal 
+                    book={bookToSave} 
+                    onClose={() => setBookToSave(null)} 
+                />
             )}
         </div>
     );

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SavedBook, useSavedBooks } from '../../hooks/useSavedBooks';
+import { useSavedBooks } from '../../hooks/useSavedBooks';
 
 interface SaveBookModalProps {
     book: any;

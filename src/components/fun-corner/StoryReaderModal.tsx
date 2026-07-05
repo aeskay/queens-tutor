@@ -86,7 +86,7 @@ const StoryReaderModal: React.FC<StoryReaderModalProps> = ({ story, onClose }) =
                                         const showExplanation = revealExplanations[qIdx];
                                         
                                         const normalize = (s: string | undefined) => s ? String(s).replace(/^[a-d][\.\)]\s*/i, '').replace(/[^\w\s]/g, '').trim().toLowerCase() : '';
-                                        const isSelectedCorrect = selected && (normalize(selected) === normalize(q.correctAnswer) || normalize(selected).includes(normalize(q.correctAnswer)) || normalize(q.correctAnswer).includes(normalize(selected)));
+                                        const isSelectedCorrect = selected && normalize(selected) === normalize(q.correctAnswer);
 
                                         return (
                                             <div key={qIdx} className="bg-white border border-[#ebd7b1]/60 rounded-3xl p-6 sm:p-8 shadow-sm">
@@ -98,7 +98,7 @@ const StoryReaderModal: React.FC<StoryReaderModalProps> = ({ story, onClose }) =
                                                 <div className="grid grid-cols-1 gap-3">
                                                     {q.options.map((opt, oIdx) => {
                                                         const isSelected = selected === opt;
-                                                        const isCorrect = normalize(opt) === normalize(q.correctAnswer) || normalize(opt).includes(normalize(q.correctAnswer)) || normalize(q.correctAnswer).includes(normalize(opt));
+                                                        const isCorrect = normalize(opt) === normalize(q.correctAnswer);
                                                         
                                                         let btnStyle = "border-2 border-slate-100 bg-slate-50 hover:bg-slate-100/50 hover:border-slate-300 text-slate-700";
                                                         

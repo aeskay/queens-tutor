@@ -61,7 +61,7 @@ const SCHEMA = `Return a JSON array of exactly 5 objects:
   }
 ]`;
 
-function buildPrompt(country: string, grade: string, subject: string, extraInfo: string, gradeLingo: string, existingTitles?: string[]): string {
+function buildPrompt(country: string, grade: string, subject: string, extraInfo: string, gradeLingo: string, existingTitles?: string[], textbookName?: string): string {
     const hasExtra = extraInfo.trim().length > 0;
     const extraConstraint = hasExtra
         ? `\n- Specific requirement (MANDATORY — every book MUST address this): "${extraInfo.trim()}"\n  This is not optional background. Tailor ALL 5 recommendations to this constraint.`
@@ -71,10 +71,15 @@ function buildPrompt(country: string, grade: string, subject: string, extraInfo:
         ? `\n- DO NOT RECOMMEND any of the following books (the student already has them in their list):\n${existingTitles.map(t => `  * "${t}"`).join('\n')}`
         : '';
 
+    const hasTextbook = textbookName && textbookName.trim().length > 0;
+    const textbookConstraint = hasTextbook
+        ? `\n- TARGET TEXTBOOK: "${textbookName.trim()}" (CRITICAL: The user is specifically looking for this book. Prioritize finding THIS exact book if it exists as a free PDF. If not, suggest the absolute closest free alternatives.)`
+        : '';
+
     return `Suggest 5 real, freely available textbooks for this student:
 - Country: ${country} (use this to understand the grade system only — e.g. "${gradeLingo} ${grade}" in ${country})
 - ${gradeLingo}: ${grade}
-- Subject: ${subject}${extraConstraint}${exclusionConstraint}
+- Subject: ${subject}${textbookConstraint}${extraConstraint}${exclusionConstraint}
 
 IMPORTANT:
 1. Recommend internationally recognized textbooks (Cambridge, Oxford, OpenStax, CK-12, etc.) that are genuinely findable as free PDFs online.
@@ -82,6 +87,7 @@ IMPORTANT:
 3. Think: what globally respected book covers this subject at this grade level? (e.g. a Nigerian SS2 student studying Physics is roughly equivalent to a 16-year-old — recommend Cambridge IGCSE Physics, OpenStax Physics, etc.)
 4. Every book you recommend MUST actually exist. Do not hallucinate titles.
 ${hasExtra ? '5. CRITICAL: All 5 books MUST directly address the specific requirement stated above. Generic textbooks that do not match that requirement are NOT acceptable.' : ''}
+${hasTextbook ? '6. CRITICAL: You must prioritize the Target Textbook provided above. Make it the #1 recommendation if it exists.' : ''}
 
 ${SCHEMA}
 
@@ -97,7 +103,7 @@ const handler: Handler = async (event) => {
     const errors: string[] = [];
 
     try {
-        const { country, grade, subject, extraInfo, existingTitles } = JSON.parse(event.body || '{}');
+        const { country, grade, subject, extraInfo, existingTitles, textbookName } = JSON.parse(event.body || '{}');
 
         if (!country || !grade || !subject) {
             return { statusCode: 400, body: JSON.stringify({ error: 'Missing country, grade, or subject.' }) };
@@ -109,7 +115,7 @@ const handler: Handler = async (event) => {
         const openaiKey = process.env.OPENAI_API_KEY;
         const mistralKey = process.env.MISTRAL_API_KEY;
 
-        const userPrompt = buildPrompt(country, grade, subject, extraInfo || '', gradeLingo, existingTitles);
+        const userPrompt = buildPrompt(country, grade, subject, extraInfo || '', gradeLingo, existingTitles, textbookName);
         console.log(`[START] Generating textbook suggestions: ${country} / ${gradeLingo} ${grade} / ${subject}`);
 
         let aiResponse: any[] | null = null;

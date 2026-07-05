@@ -72,6 +72,7 @@ const SuggestTextbook: React.FC = () => {
     const [showCountryDropdown, setShowCountryDropdown] = useState(false);
     const [grade, setGrade] = useState('');
     const [subject, setSubject] = useState('English Language');
+    const [textbookName, setTextbookName] = useState('');
     const [extraInfo, setExtraInfo] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -106,7 +107,7 @@ const SuggestTextbook: React.FC = () => {
             const response = await fetch('/.netlify/functions/suggest-textbook', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ country, grade: grade.trim(), subject, extraInfo })
+                body: JSON.stringify({ country, grade: grade.trim(), subject, extraInfo, textbookName: textbookName.trim() })
             });
 
             if (!response.ok) {
@@ -161,7 +162,7 @@ const SuggestTextbook: React.FC = () => {
             const response = await fetch('/.netlify/functions/suggest-textbook', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ country, grade: grade.trim(), subject, extraInfo: updatedExtraInfo, existingTitles })
+                body: JSON.stringify({ country, grade: grade.trim(), subject, extraInfo: updatedExtraInfo, existingTitles, textbookName: textbookName.trim() })
             });
 
             if (!response.ok) {
@@ -323,6 +324,19 @@ const SuggestTextbook: React.FC = () => {
                                 </h3>
                                 <p className="text-xs text-slate-500">Tell us the level and subject</p>
                             </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-blue-700/70 uppercase tracking-widest mb-1.5">
+                                Textbook Name <span className="font-normal normal-case text-slate-400">(optional)</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="e.g. Cambridge IGCSE Physics"
+                                value={textbookName}
+                                onChange={e => setTextbookName(e.target.value)}
+                                className="w-full px-4 py-3 bg-white border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-300 focus:border-blue-400 focus:outline-none transition-all text-sm font-medium mb-4"
+                            />
                         </div>
 
                         <div>

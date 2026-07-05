@@ -48,7 +48,7 @@ const ClassCard: React.FC<ClassCardProps> = ({ cls, accent, onEdit, onClone, onD
                     </div>
                     
                     {/* Action buttons */}
-                    <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                    <div className="flex gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                         <button onClick={toggleStatus} title={isCompleted ? "Mark In Progress" : "Mark Completed"} className={`p-1.5 rounded-lg transition-all ${isCompleted ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}>
                             {isCompleted ? (
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>

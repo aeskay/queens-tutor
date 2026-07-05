@@ -84,6 +84,9 @@ const StoryReaderModal: React.FC<StoryReaderModalProps> = ({ story, onClose }) =
                                     {story.questions.map((q, qIdx) => {
                                         const selected = selectedAnswers[qIdx];
                                         const showExplanation = revealExplanations[qIdx];
+                                        
+                                        const normalize = (s: string | undefined) => s ? String(s).replace(/^[a-d][\.\)]\s*/i, '').replace(/[^\w\s]/g, '').trim().toLowerCase() : '';
+                                        const isSelectedCorrect = selected && (normalize(selected) === normalize(q.correctAnswer) || normalize(selected).includes(normalize(q.correctAnswer)) || normalize(q.correctAnswer).includes(normalize(selected)));
 
                                         return (
                                             <div key={qIdx} className="bg-white border border-[#ebd7b1]/60 rounded-3xl p-6 sm:p-8 shadow-sm">
@@ -95,7 +98,7 @@ const StoryReaderModal: React.FC<StoryReaderModalProps> = ({ story, onClose }) =
                                                 <div className="grid grid-cols-1 gap-3">
                                                     {q.options.map((opt, oIdx) => {
                                                         const isSelected = selected === opt;
-                                                        const isCorrect = opt === q.correctAnswer;
+                                                        const isCorrect = normalize(opt) === normalize(q.correctAnswer) || normalize(opt).includes(normalize(q.correctAnswer)) || normalize(q.correctAnswer).includes(normalize(opt));
                                                         
                                                         let btnStyle = "border-2 border-slate-100 bg-slate-50 hover:bg-slate-100/50 hover:border-slate-300 text-slate-700";
                                                         
@@ -133,9 +136,9 @@ const StoryReaderModal: React.FC<StoryReaderModalProps> = ({ story, onClose }) =
                                                 </div>
 
                                                 {showExplanation && (
-                                                    <div className={`mt-4 p-4 rounded-2xl border text-sm font-semibold leading-relaxed ${selected === q.correctAnswer ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800' : 'bg-amber-50/50 border-amber-100 text-slate-700'}`}>
+                                                    <div className={`mt-4 p-4 rounded-2xl border text-sm font-semibold leading-relaxed ${isSelectedCorrect ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800' : 'bg-amber-50/50 border-amber-100 text-slate-700'}`}>
                                                         <span className="font-extrabold uppercase text-xs tracking-wider block mb-1">
-                                                            {selected === q.correctAnswer ? '🎯 Super! Correct Answer' : '💡 Let\'s learn why:'}
+                                                            {isSelectedCorrect ? '🎯 Super! Correct Answer' : '💡 Let\'s learn why:'}
                                                         </span>
                                                         {q.explanation}
                                                     </div>
